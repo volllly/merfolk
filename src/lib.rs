@@ -57,6 +57,8 @@ pub struct Mer<T: interfaces::Backend> {
 
 impl<T> Mer<T>
   where T: interfaces::Backend {
+
+  #[allow(clippy::new_ret_no_self)]
   pub fn new() -> Builder<T, No> {
     Builder {
       backend_set: PhantomData {},
