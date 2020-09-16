@@ -1,8 +1,43 @@
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+    - main
+  push:
+    branches:
+    - main
 
 name: CI
 
 jobs:
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        continue-on-error: true  # WARNING: only for this example, remove it!
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        continue-on-error: true  # WARNING: only for this example, remove it!
+        with:
+          command: clippy
+          args: -- -D warnings
+ 
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -34,15 +69,12 @@ jobs:
           use-cross: true
           args: --release --target=${{ matrix.target }}
 
-  test:
-    name: Test Suite
+  test-linux:
+    name: Test Suite Linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
         target:
-          - x86_64-apple-darwin
-          - x86_64-pc-windows-gnu
-          - x86_64-pc-windows-msvc
           - x86_64-unknown-linux-gnu
           - armv7-unknown-linux-gnueabihf
     steps:
@@ -65,9 +97,14 @@ jobs:
           use-cross: true
           args: --target=${{ matrix.target }}
 
-  lints:
-    name: Lints
-    runs-on: ubuntu-latest
+
+  test-darwin:
+    name: Test Suite Darwin
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -77,19 +114,42 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          target: ${{ matrix.target }}
           override: true
-          components: rustfmt, clippy
 
-      - name: Run cargo fmt
+      - name: Run cargo test
         uses: actions-rs/cargo@v1
         continue-on-error: true  # WARNING: only for this example, remove it!
         with:
-          command: fmt
-          args: --all -- --check
+          command: test
+          use-cross: true
+          args: --target=${{ matrix.target }}
 
-      - name: Run cargo clippy
+
+  test-windows:
+    name: Test Suite Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-gnu
+          - x86_64-pc-windows-msvc
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Run cargo test
         uses: actions-rs/cargo@v1
         continue-on-error: true  # WARNING: only for this example, remove it!
         with:
-          command: clippy
-          args: -- -D warnings
+          command: test
+          use-cross: true
+          args: --target=${{ matrix.target }}
