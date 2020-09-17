@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 #[derive(Debug)]
 pub enum Error {
-  Decode(String)
+  Decode(String),
 }
 
 pub trait Backend {
@@ -15,12 +15,10 @@ pub trait Backend {
 
 pub struct Tx<'a, T> {
   pub procedure: &'a str,
-  pub payload: T
+  pub payload: T,
 }
 
 pub struct Rx<'a, T> {
   pub procedure: &'a str,
-  pub payload: T
+  pub payload: T,
 }
-
-

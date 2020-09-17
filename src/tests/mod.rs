@@ -1,9 +1,7 @@
 use super::*;
 
 fn setup_empty() -> Mer<backends::Empty> {
-    Mer::new()
-        .with_backend(backends::Empty {})
-        .build()
+    Mer::new().with_backend(backends::Empty {}).build()
 }
 
 #[test]
@@ -17,7 +15,12 @@ fn empty_encode() {
     use crate::backends::*;
     use crate::interfaces::backend::*;
 
-    let rx: String = Empty {}.encode(Tx::<String> { procedure: "", payload: String::from("test")}).unwrap();
+    let rx: String = Empty {}
+        .encode(Tx::<String> {
+            procedure: "",
+            payload: String::from("test"),
+        })
+        .unwrap();
 
     assert_eq!(rx, "\"\"");
 }
