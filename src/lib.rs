@@ -41,7 +41,7 @@ impl<'a, T: backend::Backend<'a>> Builder<T, Yes> {
   pub fn build(self) -> Mer<'a, T> {
     Mer {
       backend: self.backend.unwrap(),
-      _phantom: PhantomData
+      _phantom: PhantomData,
     }
   }
 }

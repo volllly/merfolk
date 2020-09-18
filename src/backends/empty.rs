@@ -2,20 +2,18 @@ use crate::interfaces::backend;
 
 pub struct Empty<'a> {
   started: bool,
-  receiver: Option<&'a dyn Fn(&dyn backend::Call)>
+  receiver: Option<&'a dyn Fn(&dyn backend::Call)>,
 }
 
 struct Receive {}
 
-impl backend::Receive for Receive {
-  
-}
+impl backend::Receive for Receive {}
 
 impl Empty<'_> {
   pub fn new<'a>() -> Empty<'a> {
     Empty {
       started: false,
-      receiver: None
+      receiver: None,
     }
   }
 
@@ -43,6 +41,6 @@ impl<'a> backend::Backend<'a> for Empty<'a> {
 
   #[allow(unused_variables)]
   fn call(&mut self, call: &dyn backend::Call) -> Result<&dyn backend::Receive, backend::Error> {
-    Ok(&Receive { })
+    Ok(&Receive {})
   }
 }
