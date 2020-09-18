@@ -1,7 +1,7 @@
 use super::*;
 
-fn setup_empty() -> Mer<backends::Empty> {
-    Mer::new().with_backend(backends::Empty {}).build()
+fn setup_empty<'a>() -> Mer<'a, backends::Empty<'a>> {
+    Mer::new().with_backend(backends::Empty::new()).build()
 }
 
 #[test]
@@ -11,27 +11,22 @@ fn initializes() {
 
 #[test]
 #[cfg(feature = "backends")]
-fn empty_encode() {
-    use crate::backends::*;
-    use crate::interfaces::backend::*;
+fn empty_receive() {
+    use backend::*;
+    let mut empty = backends::Empty::new();
 
-    let rx: String = Empty {}
-        .encode(Tx::<String> {
-            procedure: "",
-            payload: String::from("test"),
-        })
-        .unwrap();
-
-    assert_eq!(rx, "\"\"");
+    #[allow(unused_variables)]
+    empty.receive(&|call: &dyn backend::Call| println!("called")).unwrap();
 }
 
 #[test]
 #[cfg(feature = "backends")]
-fn empty_decode() {
-    use crate::backends::*;
-    use crate::interfaces::backend::*;
+fn empty_call() {
+    use backend::*;
+    let mut empty = backends::Empty::new();
 
-    let rx: Rx<String> = Empty {}.decode(&String::from("\"test\"")).unwrap();
+    struct Call {}
+    impl backend::Call for Call {}
 
-    assert_eq!(rx.payload, "test");
+    empty.call(&Call {}).unwrap();
 }

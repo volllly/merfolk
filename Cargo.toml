@@ -6,11 +6,12 @@ edition = "2018"
 
 [features]
 
-default = ["std", "backends"]
+default = ["std", "backends", "derive"]
 
 std = ["serde/std"]
-backends = ["serde_json"]
+backends = ["std", "serde_json"]
+derive = ["serde/derive"]
 
 [dependencies]
-serde = { version = "1.0.116", default-features = false }
-serde_json = { version = "1.0.57", optional = true }
+serde = { version = "^1.0.116", default-features = false }
+serde_json = { version = "^1.0.57", optional = true }

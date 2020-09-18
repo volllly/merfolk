@@ -1,24 +1,16 @@
-use serde::Deserialize;
-
 #[derive(Debug)]
 pub enum Error {
   Decode(String),
 }
 
-pub trait Backend {
-  type Encoded;
+pub trait Receive {}
 
-  fn encode<T>(&self, tx: Tx<T>) -> Result<Self::Encoded, Error>;
+pub trait Call {}
 
-  fn decode<'de, T: Deserialize<'de>>(&self, rx: &'de Self::Encoded) -> Result<Rx<T>, Error>;
-}
+pub trait Backend<'a> {
+  fn start(&mut self) -> Result<(), Error>;
+  fn stop(&mut self) -> Result<(), Error>;
 
-pub struct Tx<'a, T> {
-  pub procedure: &'a str,
-  pub payload: T,
-}
-
-pub struct Rx<'a, T> {
-  pub procedure: &'a str,
-  pub payload: T,
+  fn receive(&mut self, receiver: &'a dyn Fn(&dyn Call)) -> Result<(), Error>;
+  fn call(&mut self, call: &dyn Call) -> Result<&dyn Receive, Error>;
 }

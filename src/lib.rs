@@ -1,15 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 use core::marker::PhantomData;
 
 #[cfg(test)]
 mod tests;
 
-pub mod interfaces;
-
 #[cfg(feature = "backends")]
 pub mod backends;
 pub mod helpers;
+pub mod interfaces;
 
 use helpers::builder::*;
 use interfaces::backend;
@@ -23,7 +24,7 @@ where
   backend: Option<T>,
 }
 
-impl<T, BACKEND> Builder<T, BACKEND>
+impl<'a, T, BACKEND> Builder<T, BACKEND>
 where
   BACKEND: ToAssign,
 {
@@ -36,19 +37,22 @@ where
   }
 }
 
-impl<T: backend::Backend> Builder<T, Yes> {
-  pub fn build(self) -> Mer<T> {
+impl<'a, T: backend::Backend<'a>> Builder<T, Yes> {
+  pub fn build(self) -> Mer<'a, T> {
     Mer {
       backend: self.backend.unwrap(),
+      _phantom: PhantomData
     }
   }
 }
 
-pub struct Mer<T: backend::Backend> {
+pub struct Mer<'a, T: backend::Backend<'a>> {
+  #[allow(dead_code)]
   backend: T,
+  _phantom: PhantomData<&'a T>,
 }
 
-impl<T: backend::Backend> Mer<T> {
+impl<'a, T: backend::Backend<'a>> Mer<'a, T> {
   #[allow(clippy::new_ret_no_self)]
   pub fn new() -> Builder<T, No> {
     Builder {
