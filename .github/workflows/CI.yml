@@ -67,13 +67,12 @@ jobs:
           use-cross: true
           args: --release --target=${{ matrix.target }}
 
-  test-linux:
-    name: Test Suite Linux
+  test-cross:
+    name: Test Suite Cross
     runs-on: ubuntu-latest
     strategy:
       matrix:
         target:
-          - x86_64-unknown-linux-gnu
           - armv7-unknown-linux-gnueabihf
     steps:
       - name: Checkout sources
@@ -95,13 +94,9 @@ jobs:
           args: --target=${{ matrix.target }}
 
 
-  test-darwin:
-    name: Test Suite Darwin
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        target:
-          - x86_64-apple-darwin
+  test-linux:
+    name: Test Suite Linux
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -111,7 +106,28 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          target: ${{ matrix.target }}
+          target: x86_64-unknown-linux-gnu
+          override: true
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+
+  test-darwin:
+    name: Test Suite Darwin
+    runs-on: macos-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-apple-darwin
           override: true
 
       - name: Run cargo test
