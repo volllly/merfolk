@@ -9,18 +9,26 @@ struct Receive {}
 
 impl backend::Receive for Receive {}
 
-impl Empty<'_> {
-  pub fn new<'a>() -> Empty<'a> {
+impl Default for Empty<'_> {
+  fn default() -> Self {
     Empty {
       started: false,
       receiver: None,
     }
   }
+}
 
+impl Empty<'_> {
+  pub fn new<'a>() -> Empty<'a> {
+    Empty::default()
+  }
+
+  #[allow(dead_code)]
   fn encode<T>(&self) -> Result<String, backend::Error> {
     Ok(String::from("\"\""))
   }
 
+  #[allow(dead_code)]
   fn decode(&self) -> Result<(), backend::Error> {
     Ok(())
   }
@@ -28,15 +36,18 @@ impl Empty<'_> {
 
 impl<'a> backend::Backend<'a> for Empty<'a> {
   fn start(&mut self) -> Result<(), backend::Error> {
-    Ok(self.started = true)
+    self.started = true;
+    Ok(())
   }
 
   fn stop(&mut self) -> Result<(), backend::Error> {
-    Ok(self.started = false)
+    self.started = false;
+    Ok(())
   }
 
   fn receive(&mut self, receiver: &'a dyn Fn(&dyn backend::Call)) -> Result<(), backend::Error> {
-    Ok(self.receiver = Some(receiver))
+    self.receiver = Some(receiver);
+    Ok(())
   }
 
   #[allow(unused_variables)]
