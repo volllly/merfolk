@@ -11,14 +11,19 @@ fn initializes() {
 
 #[test]
 #[cfg(feature = "backends")]
-fn empty_receive() {
+fn empty_trigger_receive() {
   use backend::*;
   let mut empty = backends::Empty::new();
 
   #[allow(unused_variables)]
   empty
-    .receive(&|call: &dyn backend::Call| println!("called"))
+    .receiver(&|call: &backend::Call<()>| {
+      println!("called");
+      &backend::Reply { payload: &() }
+    })
     .unwrap();
+
+  empty.trigger();
 }
 
 #[test]
@@ -27,8 +32,5 @@ fn empty_call() {
   use backend::*;
   let mut empty = backends::Empty::new();
 
-  struct Call {}
-  impl backend::Call for Call {}
-
-  empty.call(&Call {}).unwrap();
+  empty.call(&backend::Call { procedure: &"", payload: &() }).unwrap();
 }
