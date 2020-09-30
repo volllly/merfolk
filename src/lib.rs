@@ -70,7 +70,7 @@ impl<'a, T: backend::Backend<'a>> Builder<T, Set> {
       backend::Reply {
         payload: mapping.borrow().get(c.procedure).unwrap().call(c.payload).unwrap()
       }
-    });
+    }).unwrap();
 
     mer
   }

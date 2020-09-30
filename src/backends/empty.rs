@@ -2,7 +2,7 @@ use crate::interfaces::backend;
 
 pub struct Empty<'a> {
   started: bool,
-  receiver: Option<&'a dyn Fn(&backend::Call<()>) -> backend::Reply<()>>,
+  receiver: Option<Box<dyn Fn(&backend::Call<()>) -> backend::Reply<()> + 'a>>,
 }
 
 impl Default for Empty<'_> {
@@ -20,7 +20,10 @@ impl Empty<'_> {
   }
 
   pub fn trigger(self) {
-    self.receiver.unwrap()(&backend::Call{ procedure: &"", payload: &() });
+    self.receiver.unwrap()(&backend::Call {
+      procedure: &"",
+      payload: &(),
+    });
   }
 }
 
@@ -37,17 +40,21 @@ impl<'a> backend::Backend<'a> for Empty<'a> {
     Ok(())
   }
 
-  fn receiver(&mut self, receiver: impl Fn(&backend::Call<Self::Intermediate>) -> backend::Reply<Self::Intermediate>) -> Result<(), backend::Error>
-    where Self::Intermediate: 'a {
-    self.receiver = Some(&receiver);
+  fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
+  where
+    T: Fn(&backend::Call<Self::Intermediate>) -> backend::Reply<Self::Intermediate>,
+    T: 'a,
+    Self::Intermediate: 'a,
+  {
+    self.receiver = Some(Box::new(receiver));
     Ok(())
   }
 
-
   #[allow(unused_variables)]
-  fn call(&mut self, call: &backend::Call<Self::Intermediate>) -> Result<&backend::Reply<Self::Intermediate>, backend::Error> {
-    Ok(&backend::Reply {
-      payload: ()
-    })
+  fn call(
+    &mut self,
+    call: &backend::Call<Self::Intermediate>,
+  ) -> Result<&backend::Reply<Self::Intermediate>, backend::Error> {
+    Ok(&backend::Reply { payload: () })
   }
 }

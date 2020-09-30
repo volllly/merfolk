@@ -17,9 +17,9 @@ fn empty_trigger_receive() {
 
   #[allow(unused_variables)]
   empty
-    .receiver(&|call: &backend::Call<()>| {
+    .receiver(|call: &backend::Call<()>| {
       println!("called");
-      &backend::Reply { payload: &() }
+      backend::Reply { payload: () }
     })
     .unwrap();
 

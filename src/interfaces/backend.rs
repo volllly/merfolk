@@ -1,14 +1,13 @@
 #[derive(Debug)]
-pub enum Error {
-}
+pub enum Error {}
 
 pub struct Call<'a, T> {
   pub procedure: &'a str,
-  pub payload: &'a T
+  pub payload: &'a T,
 }
 
 pub struct Reply<T> {
-  pub payload: T
+  pub payload: T,
 }
 
 pub trait Backend<'a> {
@@ -17,8 +16,11 @@ pub trait Backend<'a> {
   fn start(&mut self) -> Result<(), Error>;
   fn stop(&mut self) -> Result<(), Error>;
 
-  fn receiver(&mut self, receiver: impl Fn(&Call<Self::Intermediate>) -> Reply<Self::Intermediate>) -> Result<(), Error>
-    where Self::Intermediate: 'a;
+  fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
+  where
+    T: Fn(&Call<Self::Intermediate>) -> Reply<Self::Intermediate>,
+    T: 'a,
+    Self::Intermediate: 'a;
 
   fn call(&mut self, call: &Call<Self::Intermediate>) -> Result<&Reply<Self::Intermediate>, Error>;
 }
