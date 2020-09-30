@@ -13,5 +13,6 @@ backends = ["std", "serde_json"]
 derive = ["serde/derive"]
 
 [dependencies]
-serde = { version = "^1.0.116", default-features = false }
-serde_json = { version = "^1.0.57", optional = true }
+serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.57", optional = true }
+hashbrown = "0.9.0"

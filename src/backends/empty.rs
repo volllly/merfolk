@@ -2,12 +2,8 @@ use crate::interfaces::backend;
 
 pub struct Empty<'a> {
   started: bool,
-  receiver: Option<&'a dyn Fn(&dyn backend::Call)>,
+  receiver: Option<Box<dyn Fn(&backend::Call<()>) -> backend::Reply<()> + 'a>>,
 }
-
-struct Receive {}
-
-impl backend::Receive for Receive {}
 
 impl Default for Empty<'_> {
   fn default() -> Self {
@@ -23,18 +19,17 @@ impl Empty<'_> {
     Empty::default()
   }
 
-  #[allow(dead_code)]
-  fn encode<T>(&self) -> Result<String, backend::Error> {
-    Ok(String::from("\"\""))
-  }
-
-  #[allow(dead_code)]
-  fn decode(&self) -> Result<(), backend::Error> {
-    Ok(())
+  pub fn trigger(self) {
+    self.receiver.unwrap()(&backend::Call {
+      procedure: &"",
+      payload: &(),
+    });
   }
 }
 
 impl<'a> backend::Backend<'a> for Empty<'a> {
+  type Intermediate = ();
+
   fn start(&mut self) -> Result<(), backend::Error> {
     self.started = true;
     Ok(())
@@ -45,13 +40,21 @@ impl<'a> backend::Backend<'a> for Empty<'a> {
     Ok(())
   }
 
-  fn receive(&mut self, receiver: &'a dyn Fn(&dyn backend::Call)) -> Result<(), backend::Error> {
-    self.receiver = Some(receiver);
+  fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
+  where
+    T: Fn(&backend::Call<Self::Intermediate>) -> backend::Reply<Self::Intermediate>,
+    T: 'a,
+    Self::Intermediate: 'a,
+  {
+    self.receiver = Some(Box::new(receiver));
     Ok(())
   }
 
   #[allow(unused_variables)]
-  fn call(&mut self, call: &dyn backend::Call) -> Result<&dyn backend::Receive, backend::Error> {
-    Ok(&Receive {})
+  fn call(
+    &mut self,
+    call: &backend::Call<Self::Intermediate>,
+  ) -> Result<&backend::Reply<Self::Intermediate>, backend::Error> {
+    Ok(&backend::Reply { payload: () })
   }
 }
