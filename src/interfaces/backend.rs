@@ -10,8 +10,11 @@ pub struct Reply<T> {
   pub payload: T,
 }
 
+// Exprtimental
+// pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
+
 pub trait Backend<'a> {
-  type Intermediate;
+  type Intermediate: serde::Serialize + serde::Deserialize<'a>;
 
   fn start(&mut self) -> Result<(), Error>;
   fn stop(&mut self) -> Result<(), Error>;

@@ -48,12 +48,15 @@ where
   }
 }
 
+pub type Procedure<T> = dyn frontend::Register<Intermediate = T>;
+pub type Mapping<'a, T> = HashMap<&'a str, &'a Procedure<T>>;
+
 pub struct Mer<'a, T: backend::Backend<'a>> {
   #[allow(dead_code)]
   _phantom: PhantomData<&'a T>,
 
   backend: T,
-  mapping: Rc<RefCell<HashMap<&'a str, &'a dyn frontend::Register<Intermediate = T::Intermediate>>>>
+  mapping: Rc<RefCell<Mapping<'a, T::Intermediate>>>
 }
 
 impl<'a, T: backend::Backend<'a>> Builder<T, Set> {
@@ -95,7 +98,7 @@ impl<'a, T: backend::Backend<'a>> Mer<'a, T> {
     self.backend.stop()
   }
 
-  pub fn register(&mut self, name: &'a str, body: &'a dyn frontend::Register<Intermediate = T::Intermediate>) -> Result<(), Error> {
+  pub fn register(&mut self, name: &'a str, body: &'a Procedure<T::Intermediate>) -> Result<(), Error> {
     self.mapping.borrow_mut().insert(name, body);
     Ok(())
   }

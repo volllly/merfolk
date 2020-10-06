@@ -1,8 +1,9 @@
 use crate::interfaces::backend;
 
+type Receiver<'a> = dyn Fn(&backend::Call<()>) -> backend::Reply<()> + 'a;
 pub struct Empty<'a> {
   started: bool,
-  receiver: Option<Box<dyn Fn(&backend::Call<()>) -> backend::Reply<()> + 'a>>,
+  receiver: Option<Box<Receiver<'a>>>,
 }
 
 impl Default for Empty<'_> {
