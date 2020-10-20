@@ -1,11 +1,8 @@
-
 #[derive(Debug)]
-pub struct Error {
+pub struct Error {}
 
-}
+pub trait Procedure<'a> {
+  type Intermediate: serde::Serialize + serde::Deserialize<'a>;
 
-pub trait Register {
-  type Intermediate;
-
-  fn call(&self, payload: & Self::Intermediate) -> Result<Self::Intermediate, Error>;
+  fn call(&self, payload: &Self::Intermediate) -> Result<Self::Intermediate, Error>;
 }

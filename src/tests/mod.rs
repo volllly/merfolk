@@ -32,5 +32,40 @@ fn empty_call() {
   use backend::*;
   let mut empty = backends::Empty::new();
 
-  empty.call(&backend::Call { procedure: &"", payload: &() }).unwrap();
+  empty
+    .call(&backend::Call {
+      procedure: &"",
+      payload: &(),
+    })
+    .unwrap();
+}
+
+#[test]
+#[cfg(feature = "frontends")]
+fn empty_register() {
+  use frontends::*;
+  let mut mer = setup_empty();
+
+  assert_eq!(true, mer.register("", &empty::Empty {}).is_ok());
+}
+
+#[test]
+fn frontend_call() {
+  fn add(a: i32, b: i32) -> i32 {
+    a + b
+  }
+
+  impl<'a, T> Call<'a, T>
+  where
+    T: backend::Backend<'a>,
+  {
+    fn add(&self, a: i32, b: i32) -> i32 {
+      backend::Call {
+        procedure: "add",
+        payload: 
+      }
+      let parameters: (i32, i32);
+      add(parameters.0, parameters.0)
+    }
+  }
 }

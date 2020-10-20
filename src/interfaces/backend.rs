@@ -1,17 +1,7 @@
 #[derive(Debug)]
 pub enum Error {}
 
-pub struct Call<'a, T> {
-  pub procedure: &'a str,
-  pub payload: &'a T,
-}
-
-pub struct Reply<T> {
-  pub payload: T,
-}
-
-// Exprtimental
-// pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
+// EXPRTIMENTAL: pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
 
 pub trait Backend<'a> {
   type Intermediate: serde::Serialize + serde::Deserialize<'a>;
@@ -21,9 +11,9 @@ pub trait Backend<'a> {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
   where
-    T: Fn(&Call<Self::Intermediate>) -> Reply<Self::Intermediate>,
+    T: Fn(&crate::Call<Self::Intermediate>) -> crate::Reply<Self::Intermediate>,
     T: 'a,
     Self::Intermediate: 'a;
 
-  fn call(&mut self, call: &Call<Self::Intermediate>) -> Result<&Reply<Self::Intermediate>, Error>;
+  fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<&crate::Reply<Self::Intermediate>, Error>;
 }

@@ -1,6 +1,6 @@
 use crate::interfaces::backend;
 
-type Receiver<'a> = dyn Fn(&backend::Call<()>) -> backend::Reply<()> + 'a;
+type Receiver<'a> = dyn Fn(&crate::Call<()>) -> crate::Reply<()> + 'a;
 pub struct Empty<'a> {
   started: bool,
   receiver: Option<Box<Receiver<'a>>>,
@@ -21,7 +21,7 @@ impl Empty<'_> {
   }
 
   pub fn trigger(self) {
-    self.receiver.unwrap()(&backend::Call {
+    self.receiver.unwrap()(&crate::Call {
       procedure: &"",
       payload: &(),
     });
@@ -43,7 +43,7 @@ impl<'a> backend::Backend<'a> for Empty<'a> {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
-    T: Fn(&backend::Call<Self::Intermediate>) -> backend::Reply<Self::Intermediate>,
+    T: Fn(&crate::Call<Self::Intermediate>) -> crate::Reply<Self::Intermediate>,
     T: 'a,
     Self::Intermediate: 'a,
   {
@@ -54,8 +54,8 @@ impl<'a> backend::Backend<'a> for Empty<'a> {
   #[allow(unused_variables)]
   fn call(
     &mut self,
-    call: &backend::Call<Self::Intermediate>,
-  ) -> Result<&backend::Reply<Self::Intermediate>, backend::Error> {
-    Ok(&backend::Reply { payload: () })
+    call: &crate::Call<Self::Intermediate>,
+  ) -> Result<&crate::Reply<Self::Intermediate>, backend::Error> {
+    Ok(&crate::Reply { payload: () })
   }
 }
