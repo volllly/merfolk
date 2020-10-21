@@ -1,10 +1,7 @@
 use super::*;
 
 fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
-  Mer::new()
-    .with_backend(backends::Empty::new())
-    .with_frontnd(frontends::Empty::new())
-    .build()
+  Mer::new().with_backend(backends::Empty::new()).with_frontnd(frontends::Empty::new()).build()
 }
 
 #[test]
@@ -35,12 +32,7 @@ fn empty_call() {
   use backend::*;
   let mut empty = backends::Empty::new();
 
-  empty
-    .call(&Call {
-      procedure: &"",
-      payload: Box::new(()),
-    })
-    .unwrap();
+  empty.call(&Call { procedure: &"", payload: Box::new(()) }).unwrap();
 }
 
 // #[test]
@@ -58,12 +50,9 @@ fn frontend_call() {
     a + b
   }
 
-  impl<'a> Caller<'a> {
-    fn add(&self, a: i32, b: i32) {
-      self.handler()(&Call {
-        procedure: "add",
-        payload: Box::new((a, b)),
-      });
+  impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
+    fn add(&self, a: i32, b: i32) -> i32 {
+      self.handler()(&Call { procedure: "add", payload: Box::new((a, b)) })
     }
   }
 
@@ -83,7 +72,7 @@ fn frontend_receive() {
   mer
     .receive(&Call {
       procedure: "add",
-      payload: &(),
+      payload: &serde_json::to_string(&(1i32, 2i32)).unwrap(),
     })
     .unwrap();
 }

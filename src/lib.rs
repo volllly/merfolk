@@ -20,7 +20,7 @@ use interfaces::{backend, frontend};
 
 pub struct Error {}
 
-pub struct Builder<T, F, BACKEND, FRONTEND>
+pub struct Builder<B, F, BACKEND, FRONTEND>
 where
   BACKEND: ToAssign,
   FRONTEND: ToAssign,
@@ -28,16 +28,16 @@ where
   backend_set: PhantomData<BACKEND>,
   frontend_set: PhantomData<FRONTEND>,
 
-  backend: Option<T>,
+  backend: Option<B>,
   frontend: Option<F>,
 }
 
-impl<'a, T, F, BACKEND, FRONTEND> Builder<T, F, BACKEND, FRONTEND>
+impl<'a, B, F, BACKEND, FRONTEND> Builder<B, F, BACKEND, FRONTEND>
 where
   BACKEND: ToAssign,
   FRONTEND: ToAssign,
 {
-  pub fn with_backend(self, backend: T) -> Builder<T, F, Set, FRONTEND> {
+  pub fn with_backend(self, backend: B) -> Builder<B, F, Set, FRONTEND> {
     Builder {
       backend_set: PhantomData {},
       frontend_set: self.frontend_set,
@@ -47,7 +47,7 @@ where
     }
   }
 
-  pub fn with_frontnd(self, frontend: F) -> Builder<T, F, BACKEND, Set> {
+  pub fn with_frontnd(self, frontend: F) -> Builder<B, F, BACKEND, Set> {
     Builder {
       backend_set: self.backend_set,
       frontend_set: PhantomData {},
@@ -67,66 +67,80 @@ pub struct Reply<T> {
   pub payload: T,
 }
 
-pub struct Caller<'a> {
-  call: Rc<dyn Fn(&Call<Box<dyn erased_serde::Serialize>>) + 'a>,
+pub struct Caller<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> {
+  #[allow(clippy::type_complexity)]
+  call: Rc<dyn Fn(&Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<B::Intermediate>, backend::Error> + 'a>,
+  frontend: Rc<RefCell<F>>,
+  backend: Rc<RefCell<B>>,
 }
 
-pub trait Handler<'a, T> {
-  fn handler(&self) -> Rc<dyn Fn(&Call<T>) + 'a>;
+pub trait AutomaticCall<'a> {
+  #[allow(clippy::type_complexity)]
+  fn call<R: serde::Deserialize<'a>>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error>;
 }
 
-impl<'a> Handler<'a, Box<dyn erased_serde::Serialize>> for Caller<'a> {
-  fn handler(&self) -> Rc<dyn Fn(&Call<Box<dyn erased_serde::Serialize>>) + 'a> {
-    self.call.clone()
+impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> AutomaticCall<'a> for Caller<'a, B, F> {
+  #[allow(clippy::type_complexity)]
+  fn call<R: serde::Deserialize<'a>>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error> {
+    let reply = (self.call)(call)?;
+
+    Ok(Reply {
+      payload: self.backend.borrow().deserialize(&reply.payload)?,
+    })
   }
 }
 
-pub struct Mer<'a, T, F>
-where
-  T: backend::Backend<'a>,
-  T: 'a,
-  F: frontend::Frontend<'a>,
-  F: 'a,
-{
-  #[allow(dead_code)]
-  _phantom: PhantomData<T>,
-
-  backend: Rc<RefCell<T>>,
-  frontend: Rc<RefCell<F>>,
-
-  #[allow(clippy::type_complexity)]
-  call: Caller<'a>,
+pub trait ManualCall<'a, B> {
+  fn manual<C>(&self, procedure: &str, payload: Box<dyn erased_serde::Serialize>) -> Result<B, backend::Error>;
 }
 
-impl<'a, T, F> Builder<T, F, Set, Set>
+impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> ManualCall<'a, B> for Caller<'a, B, F> {
+  fn manual<C>(&self, procedure: &str, payload: Box<dyn erased_serde::Serialize>) -> Result<B, backend::Error> {
+    self.handler()(&Call { procedure, payload }).map(|r| r.payload)
+  }
+}
+
+pub struct Mer<'a, B, F>
 where
-  T: backend::Backend<'a>,
-  T: 'a,
+  B: backend::Backend<'a>,
+  B: 'a,
   F: frontend::Frontend<'a>,
   F: 'a,
 {
-  pub fn build(self) -> Mer<'a, T, F> {
+  backend: Rc<RefCell<B>>,
+  frontend: Rc<RefCell<F>>,
+
+  #[allow(dead_code)]
+  call: Caller<'a, B, F>,
+}
+
+impl<'a, B, F> Builder<B, F, Set, Set>
+where
+  B: backend::Backend<'a>,
+  B: 'a,
+  F: frontend::Frontend<'a>,
+  F: 'a,
+{
+  pub fn build(self) -> Mer<'a, B, F> {
     let backend = Rc::new(RefCell::new(self.backend.unwrap()));
     let frontend = Rc::new(RefCell::new(self.frontend.unwrap()));
 
     Mer {
-      _phantom: PhantomData,
-
-      backend: backend.clone(),
-      frontend: frontend.clone(),
+      backend,
+      frontend,
 
       call: Caller {
-        call: Rc::new(move |call: &Call<Box<dyn erased_serde::Serialize>>| {
-          backend.borrow_mut().call(call).unwrap();
-        }),
+        call: Rc::new(move |call: &Call<Box<dyn erased_serde::Serialize>>| backend.borrow_mut().call(call)),
+        frontend,
+        backend,
       },
     }
   }
 }
 
-impl<'a, T: backend::Backend<'a>, F: frontend::Frontend<'a>> Mer<'a, T, F> {
+impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> Mer<'a, B, F> {
   #[allow(clippy::new_ret_no_self)]
-  pub fn new() -> Builder<T, F, Unset, Unset> {
+  pub fn new() -> Builder<B, F, Unset, Unset> {
     Builder {
       backend_set: PhantomData {},
       frontend_set: PhantomData {},
@@ -144,19 +158,7 @@ impl<'a, T: backend::Backend<'a>, F: frontend::Frontend<'a>> Mer<'a, T, F> {
     self.backend.borrow_mut().stop()
   }
 
-  pub fn receive(
-    &self,
-    call: &Call<&F::Intermediate>,
-  ) -> Result<Reply<Box<dyn erased_serde::Serialize>>, frontend::Error> {
+  pub fn receive(&self, call: &Call<&F::Intermediate>) -> Result<Reply<Box<dyn erased_serde::Serialize>>, frontend::Error> {
     self.frontend.borrow().receive(call)
   }
-
-  // pub fn register<C>(&mut self, name: &'a str, body: C) -> Result<(), Error>
-  // where
-  //   C: Fn(&crate::Call<F::Intermediate>) -> Result<crate::Reply<F::Intermediate>, Error>,
-  //   C: 'a,
-  // {
-  //   self.mapping.borrow_mut().insert(name, Box::new(body));
-  //   Ok(())
-  // }
 }

@@ -24,7 +24,7 @@ impl Empty {
 }
 
 impl<'a> backend::Backend<'a> for Empty {
-  type Intermediate = ();
+  type Intermediate = String;
 
   fn start(&mut self) -> Result<(), backend::Error> {
     self.started = true;
@@ -47,20 +47,17 @@ impl<'a> backend::Backend<'a> for Empty {
   // }
 
   #[allow(unused_variables)]
-  fn call(
-    &mut self,
-    call: &crate::Call<Box<dyn erased_serde::Serialize>>,
-  ) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
-    println!(
-      "{}: {}",
-      call.procedure,
-      serde_json::to_string(&call.payload).unwrap()
-    );
-    Ok(crate::Reply { payload: () })
+  fn call(&mut self, call: &crate::Call<Box<dyn erased_serde::Serialize>>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
+    let ser = self.serialize(&call.payload).unwrap();
+    println!("{}: {}", call.procedure, ser);
+    Ok(crate::Reply { payload: ser })
   }
 
-  fn serialize(&self, from: &dyn erased_serde::Serialize) -> &() {
-    println!("{}", serde_json::to_string(from).unwrap());
-    &()
+  fn serialize(&self, from: &dyn erased_serde::Serialize) -> Result<String, backend::Error> {
+    serde_json::to_string(from).map_err(|e| backend::Error::Serialize(Some(e.to_string())))
+  }
+
+  fn deserialize<T: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<T, backend::Error> {
+    serde_json::from_str(&from).map_err(|e| backend::Error::Deserialize(Some(e.to_string())))
   }
 }

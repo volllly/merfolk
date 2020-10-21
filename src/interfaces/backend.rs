@@ -1,5 +1,8 @@
 #[derive(Debug)]
-pub enum Error {}
+pub enum Error {
+  Serialize(Option<String>),
+  Deserialize(Option<String>),
+}
 
 // EXPRTIMENTAL: pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
 
@@ -15,10 +18,9 @@ pub trait Backend<'a> {
   //   T: 'a,
   //   Self::Intermediate: 'a;
 
-  fn call(
-    &mut self,
-    call: &crate::Call<Box<dyn erased_serde::Serialize>>,
-  ) -> Result<crate::Reply<Self::Intermediate>, Error>;
+  fn call(&mut self, call: &crate::Call<Box<dyn erased_serde::Serialize>>) -> Result<crate::Reply<Self::Intermediate>, Error>;
 
-  fn serialize(&self, from: &dyn erased_serde::Serialize) -> &Self::Intermediate;
+  fn serialize(&self, from: &dyn erased_serde::Serialize) -> Result<Self::Intermediate, Error>;
+
+  fn deserialize<T: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<T, Error>;
 }
