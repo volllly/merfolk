@@ -9,11 +9,16 @@ pub trait Backend<'a> {
   fn start(&mut self) -> Result<(), Error>;
   fn stop(&mut self) -> Result<(), Error>;
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
-  where
-    T: Fn(&crate::Call<Self::Intermediate>) -> crate::Reply<Self::Intermediate>,
-    T: 'a,
-    Self::Intermediate: 'a;
+  // fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
+  // where
+  //   T: Fn(&crate::Call<&dyn erased_serde::Serialize>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
+  //   T: 'a,
+  //   Self::Intermediate: 'a;
 
-  fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<&crate::Reply<Self::Intermediate>, Error>;
+  fn call(
+    &mut self,
+    call: &crate::Call<Box<dyn erased_serde::Serialize>>,
+  ) -> Result<crate::Reply<Self::Intermediate>, Error>;
+
+  fn serialize(&self, from: &dyn erased_serde::Serialize) -> &Self::Intermediate;
 }

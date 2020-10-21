@@ -1,34 +1,29 @@
 use crate::interfaces::backend;
 
-type Receiver<'a> = dyn Fn(&crate::Call<()>) -> crate::Reply<()> + 'a;
-pub struct Empty<'a> {
+pub struct Empty {
   started: bool,
-  receiver: Option<Box<Receiver<'a>>>,
 }
 
-impl Default for Empty<'_> {
+impl Default for Empty {
   fn default() -> Self {
-    Empty {
-      started: false,
-      receiver: None,
-    }
+    Empty { started: false }
   }
 }
 
-impl Empty<'_> {
-  pub fn new<'a>() -> Empty<'a> {
+impl Empty {
+  pub fn new() -> Empty {
     Empty::default()
   }
 
   pub fn trigger(self) {
-    self.receiver.unwrap()(&crate::Call {
-      procedure: &"",
-      payload: &(),
-    });
+    // self.receiver.unwrap()(&crate::Call {
+    //   procedure: &"",
+    //   payload: (),
+    // });
   }
 }
 
-impl<'a> backend::Backend<'a> for Empty<'a> {
+impl<'a> backend::Backend<'a> for Empty {
   type Intermediate = ();
 
   fn start(&mut self) -> Result<(), backend::Error> {
@@ -41,21 +36,31 @@ impl<'a> backend::Backend<'a> for Empty<'a> {
     Ok(())
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
-  where
-    T: Fn(&crate::Call<Self::Intermediate>) -> crate::Reply<Self::Intermediate>,
-    T: 'a,
-    Self::Intermediate: 'a,
-  {
-    self.receiver = Some(Box::new(receiver));
-    Ok(())
-  }
+  // fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
+  // where
+  //   T: Fn(&crate::Call<Self::Intermediate>) -> crate::Reply<Self::Intermediate>,
+  //   T: 'a,
+  //   Self::Intermediate: 'a,
+  // {
+  //   self.receiver = Some(Box::new(receiver));
+  //   Ok(())
+  // }
 
   #[allow(unused_variables)]
   fn call(
     &mut self,
-    call: &crate::Call<Self::Intermediate>,
-  ) -> Result<&crate::Reply<Self::Intermediate>, backend::Error> {
-    Ok(&crate::Reply { payload: () })
+    call: &crate::Call<Box<dyn erased_serde::Serialize>>,
+  ) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
+    println!(
+      "{}: {}",
+      call.procedure,
+      serde_json::to_string(&call.payload).unwrap()
+    );
+    Ok(crate::Reply { payload: () })
+  }
+
+  fn serialize(&self, from: &dyn erased_serde::Serialize) -> &() {
+    println!("{}", serde_json::to_string(from).unwrap());
+    &()
   }
 }
