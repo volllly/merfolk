@@ -22,5 +22,5 @@ pub trait Backend<'a> {
 
   fn serialize(&self, from: &dyn erased_serde::Serialize) -> Result<Self::Intermediate, Error>;
 
-  fn deserialize<T: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<T, Error>;
+  fn deserialize<'b, T>(&self, from: &'b Self::Intermediate) -> Result<T, Error> where T: for<'de> serde::Deserialize<'de>;
 }

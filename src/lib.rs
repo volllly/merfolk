@@ -74,31 +74,30 @@ pub struct Caller<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> {
   backend: Rc<RefCell<B>>,
 }
 
-pub trait AutomaticCall<'a> {
+pub trait AutomaticCall {
   #[allow(clippy::type_complexity)]
-  fn call<R: serde::Deserialize<'a>>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error>;
+  fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<Box<R>>, backend::Error> where R: for<'de> serde::Deserialize<'de> ;
 }
 
-impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> AutomaticCall<'a> for Caller<'a, B, F> {
+impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> AutomaticCall for Caller<'a, B, F> {
   #[allow(clippy::type_complexity)]
-  fn call<R: serde::Deserialize<'a>>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error> {
-    let reply = (self.call)(call)?;
+  fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<Box<R>>, backend::Error> where R: for<'de> serde::Deserialize<'de>  {
 
     Ok(Reply {
-      payload: self.backend.borrow().deserialize(&reply.payload)?,
+      payload: self.backend.borrow().deserialize(&(self.call)(call)?.payload)?,
     })
   }
 }
 
-pub trait ManualCall<'a, B> {
-  fn manual<C>(&self, procedure: &str, payload: Box<dyn erased_serde::Serialize>) -> Result<B, backend::Error>;
-}
+// pub trait ManualCall<'a, B> {
+//   fn manual<C>(&self, procedure: &str, payload: Box<dyn erased_serde::Serialize>) -> Result<B, backend::Error>;
+// }
 
-impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> ManualCall<'a, B> for Caller<'a, B, F> {
-  fn manual<C>(&self, procedure: &str, payload: Box<dyn erased_serde::Serialize>) -> Result<B, backend::Error> {
-    self.handler()(&Call { procedure, payload }).map(|r| r.payload)
-  }
-}
+// impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> ManualCall<'a, B> for Caller<'a, B, F> {
+//   fn manual<C>(&self, procedure: &str, payload: Box<dyn erased_serde::Serialize>) -> Result<B, backend::Error> {
+//     (self.call)(&Call { procedure, payload }).map(|r| r.payload)
+//   }
+// }
 
 pub struct Mer<'a, B, F>
 where
@@ -126,13 +125,13 @@ where
     let frontend = Rc::new(RefCell::new(self.frontend.unwrap()));
 
     Mer {
-      backend,
-      frontend,
+      backend: backend.clone(),
+      frontend: frontend.clone(),
 
       call: Caller {
-        call: Rc::new(move |call: &Call<Box<dyn erased_serde::Serialize>>| backend.borrow_mut().call(call)),
         frontend,
-        backend,
+        backend: backend.clone(),
+        call: Rc::new(move |call: &Call<Box<dyn erased_serde::Serialize>>| backend.borrow_mut().call(call)),
       },
     }
   }

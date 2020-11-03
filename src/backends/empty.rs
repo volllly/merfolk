@@ -57,7 +57,7 @@ impl<'a> backend::Backend<'a> for Empty {
     serde_json::to_string(from).map_err(|e| backend::Error::Serialize(Some(e.to_string())))
   }
 
-  fn deserialize<T: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<T, backend::Error> {
+  fn deserialize<'b, T>(&self, from: &'b Self::Intermediate) -> Result<T, backend::Error> where T: for<'de> serde::Deserialize<'de> {
     serde_json::from_str(&from).map_err(|e| backend::Error::Deserialize(Some(e.to_string())))
   }
 }
