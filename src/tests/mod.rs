@@ -52,7 +52,9 @@ fn frontend_call() {
 
   impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
     fn add(&self, a: i32, b: i32) -> i32 {
-      self.handler()(&Call { procedure: "add", payload: Box::new((a, b)) })
+      let reply = self.call(&Call { procedure: "add", payload: Box::new((a, b)) });
+      // self.backend.deserialize();
+      reply.unwrap().payload
     }
   }
 
