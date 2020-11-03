@@ -51,16 +51,14 @@ fn frontend_call() {
   }
 
   impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
-    fn add(&self, a: i32, b: i32) -> i32 {
-      let reply = self.call(&Call { procedure: "add", payload: Box::new((a, b)) });
-      // self.backend.deserialize();
-      reply.unwrap().payload
+    fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
+      Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
     }
   }
 
   let mer = setup_empty();
 
-  mer.call.add(1, 2);
+  mer.call.add(1, 2).unwrap();
 }
 
 #[test]

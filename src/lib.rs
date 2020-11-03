@@ -76,12 +76,12 @@ pub struct Caller<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> {
 
 pub trait AutomaticCall {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<Box<R>>, backend::Error> where R: for<'de> serde::Deserialize<'de> ;
+  fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error> where R: for<'de> serde::Deserialize<'de> ;
 }
 
 impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> AutomaticCall for Caller<'a, B, F> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<Box<R>>, backend::Error> where R: for<'de> serde::Deserialize<'de>  {
+  fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error> where R: for<'de> serde::Deserialize<'de>  {
 
     Ok(Reply {
       payload: self.backend.borrow().deserialize(&(self.call)(call)?.payload)?,
