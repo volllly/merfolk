@@ -58,6 +58,23 @@ fn frontend_call() {
 
   let mer = setup_empty();
 
+  assert_eq!(mer.call.add(1, 2).is_ok(), false);
+}
+
+#[test]
+fn frontend_http() {
+  fn add(a: i32, b: i32) -> i32 {
+    a + b
+  }
+
+  impl<'a> Caller<'a, backends::Http, frontends::Empty> {
+    fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
+      Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
+    }
+  }
+
+  let mer = Mer::new().with_backend(backends::Http::new(Some("http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap()))).with_frontnd(frontends::Empty::new()).build();
+
   mer.call.add(1, 2).unwrap();
 }
 

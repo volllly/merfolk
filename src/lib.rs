@@ -82,9 +82,9 @@ pub trait AutomaticCall {
 impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> AutomaticCall for Caller<'a, B, F> {
   #[allow(clippy::type_complexity)]
   fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error> where R: for<'de> serde::Deserialize<'de>  {
-
+    let reply = (self.call)(call)?;
     Ok(Reply {
-      payload: self.backend.borrow().deserialize(&(self.call)(call)?.payload)?,
+      payload: self.backend.borrow().deserialize(&reply.payload)?,
     })
   }
 }

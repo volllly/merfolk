@@ -2,6 +2,9 @@
 pub enum Error {
   Serialize(Option<String>),
   Deserialize(Option<String>),
+  Speak(Option<String>),
+  Call(Option<String>),
+  Other
 }
 
 // EXPRTIMENTAL: pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
