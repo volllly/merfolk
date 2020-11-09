@@ -18,6 +18,7 @@ pub mod interfaces;
 use helpers::builder::*;
 use interfaces::{backend, frontend};
 
+#[derive(Debug)]
 pub struct Error {}
 
 pub struct Builder<B, F, BACKEND, FRONTEND>
@@ -69,7 +70,7 @@ pub struct Reply<T> {
 
 pub struct Caller<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> {
   #[allow(clippy::type_complexity)]
-  call: Rc<dyn Fn(&Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<B::Intermediate>, backend::Error> + 'a>,
+  call: Box<dyn Fn(&Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<B::Intermediate>, backend::Error> + 'a>,
   frontend: Rc<RefCell<F>>,
   backend: Rc<RefCell<B>>,
 }
@@ -84,7 +85,7 @@ impl<'a, B: backend::Backend<'a>, F: frontend::Frontend<'a>> AutomaticCall for C
   fn call<R>(&self, call: &Call<Box<dyn erased_serde::Serialize>>) -> Result<Reply<R>, backend::Error> where R: for<'de> serde::Deserialize<'de>  {
     let reply = (self.call)(call)?;
     Ok(Reply {
-      payload: self.backend.borrow().deserialize(&reply.payload)?,
+      payload: B::deserialize(&reply.payload)?,
     })
   }
 }
@@ -124,6 +125,9 @@ where
     let backend = Rc::new(RefCell::new(self.backend.unwrap()));
     let frontend = Rc::new(RefCell::new(self.frontend.unwrap()));
 
+    // Fn(&crate::Call<Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>
+    backend.borrow_mut().receiver(|call: &Call<&B::Intermediate>| Ok(Reply { payload: Box::new(3)})).unwrap();
+
     Mer {
       backend: backend.clone(),
       frontend: frontend.clone(),
@@ -131,7 +135,7 @@ where
       call: Caller {
         frontend,
         backend: backend.clone(),
-        call: Rc::new(move |call: &Call<Box<dyn erased_serde::Serialize>>| backend.borrow_mut().call(call)),
+        call: Box::new(move |call: &Call<Box<dyn erased_serde::Serialize>>| backend.borrow_mut().call(call)),
       },
     }
   }

@@ -67,15 +67,15 @@ fn frontend_http() {
     a + b
   }
 
-  impl<'a> Caller<'a, backends::Http, frontends::Empty> {
+  impl<'a> Caller<'a, backends::Http<'a>, frontends::Empty> {
     fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
       Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
     }
   }
 
-  let mer = Mer::new().with_backend(backends::Http::new(Some("http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap()))).with_frontnd(frontends::Empty::new()).build();
+  let mer = Mer::new().with_backend(backends::Http::new(Some("http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap()), None)).with_frontnd(frontends::Empty::new()).build();
 
-  mer.call.add(1, 2).unwrap();
+  println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
 }
 
 #[test]
