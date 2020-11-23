@@ -1,7 +1,12 @@
 use super::*;
+use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
   Mer::new().with_backend(backends::Empty::new()).with_frontnd(frontends::Empty::new()).build()
+}
+
+fn setup_http<'a>() -> Mer<'a, backends::Http, frontends::Empty> {
+  Mer::new().with_backend(backends::Http::new(Some("http://127.0.0.1:8080".parse::<hyper::Uri>().unwrap()), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)))).with_frontnd(frontends::Empty::new()).build()
 }
 
 #[test]
@@ -44,18 +49,23 @@ fn empty_call() {
 //   assert_eq!(true, mer.register("", &empty::Empty {}).is_ok());
 // }
 
+fn add(a: i32, b: i32) -> i32 {
+  a + b
+}
+
+impl<'a> Caller<'a, backends::Http, frontends::Empty> {
+  fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
+    Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
+  }
+}
+
+impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
+  fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
+    Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
+  }
+}
 #[test]
 fn frontend_call() {
-  fn add(a: i32, b: i32) -> i32 {
-    a + b
-  }
-
-  impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
-    fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
-      Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
-    }
-  }
-
   let mer = setup_empty();
 
   assert_eq!(mer.call.add(1, 2).is_ok(), false);
@@ -63,16 +73,6 @@ fn frontend_call() {
 
 #[test]
 fn frontend_http() {
-  fn add(a: i32, b: i32) -> i32 {
-    a + b
-  }
-
-  impl<'a> Caller<'a, backends::Http<'a>, frontends::Empty> {
-    fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
-      Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
-    }
-  }
-
   let mer = Mer::new().with_backend(backends::Http::new(Some("http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap()), None)).with_frontnd(frontends::Empty::new()).build();
 
   println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
@@ -80,10 +80,6 @@ fn frontend_http() {
 
 #[test]
 fn frontend_receive() {
-  fn add(a: i32, b: i32) -> i32 {
-    a + b
-  }
-
   let mer = setup_empty();
 
   mer
@@ -92,4 +88,13 @@ fn frontend_receive() {
       payload: &serde_json::to_string(&(1i32, 2i32)).unwrap(),
     })
     .unwrap();
+}
+
+#[test]
+fn backend_receive() {
+  let mut mer = setup_http();
+
+  mer.start().unwrap();
+
+  println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
 }

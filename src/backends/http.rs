@@ -8,31 +8,33 @@ use hyper::{
 use hyper::http::Uri;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Response, Server};
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{net::SocketAddr};
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 
-pub struct Http<'a> {
+pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
   speak: Option<Uri>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Arc<crate::Call<&String>>) -> Arc<Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>> + 'a + Send + Sync>>,
+  receiver: Option<Arc<Mutex<dyn Fn(Arc<crate::Call<&String>>) -> Arc<Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>> + 'static + Send + Sync>>>,
+  runtime: Runtime
 }
 
-impl<'a> Default for Http<'a> {
+impl Default for Http {
   fn default() -> Self {
     Http {
       client: Client::new(),
       speak: None,
       listen: None,
       receiver: None,
+      runtime: Runtime::new().unwrap()
     }
   }
 }
 
-impl<'a> Http<'a> {
-  pub fn new(speak: Option<Uri>, listen: Option<SocketAddr>) -> Http<'a> {
+impl Http {
+  pub fn new(speak: Option<Uri>, listen: Option<SocketAddr>) -> Http {
     Http { speak, listen, ..Http::default() }
   }
 }
@@ -41,56 +43,58 @@ impl<'a> Http<'a> {
 
 // }
 
-impl<'a> backend::Backend<'a> for Http<'a> {
+impl<'a> backend::Backend<'a> for Http {
   type Intermediate = String;
 
   fn start(&mut self) -> Result<(), backend::Error> {
     let listen = self.listen;
-    let receiver = Arc::clone(&self.receiver.unwrap());
+    let receiver = Arc::clone(self.receiver.as_ref().unwrap());
 
-    Runtime::new().unwrap().spawn(async move {
-      Server::bind(&listen.unwrap()).serve(make_service_fn(move |_| async move {
-        Ok::<_, hyper::Error>(service_fn(move |request| async move {
-          let procedure = request.headers().get("Procedure");
+    self.runtime.spawn(async move {
+      let server = Server::bind(&listen.unwrap()).serve(make_service_fn(move |_| {
+        let receiver = Arc::clone(&receiver);
 
-          let body_bytes = hyper::body::to_bytes(request.into_body()).await.unwrap();
-          let body = match String::from_utf8(body_bytes.to_vec()) {
-            Ok(body) => body,
-            Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
-          };
+        async move {
+          let receiver = Arc::clone(&receiver);
+          Ok::<_, hyper::Error>(service_fn(move |request: Request<Body>| {
+            let receiver = Arc::clone(&receiver);
+          
+            async move {
+              let procedure = if let Some(procedure) = request.headers().get("Procedure") {
+                match procedure.to_str() {
+                  Ok(procedure) => procedure.to_owned(),
+                  Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap())
+                }
+              } else {
+                return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from("No Procedure provided")).unwrap());
+              };
 
-
-          if let Some(procedure) = procedure {
-            let reply = receiver(Arc::new(crate::Call {
-              procedure: match procedure.to_str() {
-                Ok(proc) => proc,
+              let body_bytes = hyper::body::to_bytes(request.into_body()).await.unwrap();
+              let body = match String::from_utf8(body_bytes.to_vec()) {
+                Ok(body) => body,
                 Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
-              },
-              payload: &body,
-            }));
+              };
 
-            match *reply {
-              Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))).unwrap()),
+              let reply = receiver.lock().unwrap()(Arc::new(crate::Call {
+                procedure: &procedure,
+                payload: &body,
+              }));
 
-              Ok(reply) => {
-                let ser = Self::serialize(reply.payload.as_ref()).unwrap();
-                Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from("ser")).unwrap())
+              match &*reply {
+                Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))).unwrap()),
+
+                Ok(reply) => {
+                  let ser = Self::serialize(reply.payload.as_ref()).unwrap();
+                  Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from(ser)).unwrap())
+                }
               }
             }
-          } else {
-            Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from("No Procedure provided")).unwrap())
-          }
-        }))
-      }))
+          }))
+        }
+      }));
 
-      // .serve(make_service_fn(|_| async {
-      //   Ok::<_, Infallible>(service_fn(|request: Request<Body>| async move {
-      //     let body_bytes = hyper::body::to_bytes(request.into_body()).await.unwrap();
-      //     let body = String::from_utf8(body_bytes.to_vec());
-
-      //     Ok(Response::new(Body::from("Hello World")))
-      //   }))
-      // }));
+      println!("{:?}", server);
+      server.await.unwrap();
     });
     Ok(())
   }
@@ -102,16 +106,16 @@ impl<'a> backend::Backend<'a> for Http<'a> {
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
     T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error> + Send + Sync,
-    T: 'a,
+    T: 'static,
   {
-    self.receiver = Some(Arc::new(move |call: Arc<crate::Call<&String>>| { 
+    self.receiver = Some(Arc::new(Mutex::new(move |call: Arc<crate::Call<&String>>| { 
       match receiver(call.as_ref()) {
         Ok(reply) => Arc::new(Ok(crate::Reply {
-          payload: Box::new(reply.payload)
+          payload: reply.payload
         })),
         Err(e) => Arc::new(Err::<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>(e))
       }
-    }));
+    })));
     Ok(())
   }
 

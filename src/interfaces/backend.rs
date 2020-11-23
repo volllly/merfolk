@@ -19,7 +19,7 @@ pub trait Backend<'a> {
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
   where
     T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error> + Send + Sync,
-    T: 'a;
+    T: 'static;
 
   fn call(&mut self, call: &crate::Call<Box<dyn erased_serde::Serialize>>) -> Result<crate::Reply<Self::Intermediate>, Error>;
 

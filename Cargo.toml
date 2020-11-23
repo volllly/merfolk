@@ -8,14 +8,16 @@ edition = "2018"
 
 default = ["std", "backends", "frontends", "derive"]
 
-std = ["serde/std", "serde-transcode/std", "erased-serde/std"]
+std = ["serde/std", 
+  #"serde-transcode/std",
+  "erased-serde/std"]
 backends = ["std", "serde_json", "hyper", "tokio", "tokio/full"]
 frontends = []
 derive = ["serde/derive"]
 
 [dependencies]
 serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
-serde-transcode = { version = "1.2.0", git = "https://github.com/volllly/serde-transcode", default-features = false, features = ["alloc"] }
+#serde-transcode = { version = "1.2.0", git = "https://github.com/volllly/serde-transcode", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0.57", optional = true }
 erased-serde = { version = "0.3.12", default-features = false, features = ["alloc"] }
 hyper = { version = "0.13.9", optional = true }

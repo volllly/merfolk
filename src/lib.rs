@@ -126,7 +126,9 @@ where
     let frontend = Rc::new(RefCell::new(self.frontend.unwrap()));
 
     // Fn(&crate::Call<Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>
-    backend.borrow_mut().receiver(|call: &Call<&B::Intermediate>| Ok(Reply { payload: Box::new(3)})).unwrap();
+    backend.borrow_mut().receiver(|call: &Call<&B::Intermediate>| {
+      Ok(Reply { payload: Box::new(3)})
+  }).unwrap();
 
     Mer {
       backend: backend.clone(),
