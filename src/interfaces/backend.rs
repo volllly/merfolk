@@ -18,12 +18,12 @@ pub trait Backend<'a> {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error> + Send + Sync,
-    T: 'static;
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
+    T: 'a;
 
-  fn call(&mut self, call: &crate::Call<Box<dyn erased_serde::Serialize>>) -> Result<crate::Reply<Self::Intermediate>, Error>;
+  fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Error>;
 
-  fn serialize<'b>(from: &'b dyn erased_serde::Serialize) -> Result<Self::Intermediate, Error>;
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate, Error>;
 
   fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, Error>
   where

@@ -38,20 +38,20 @@ impl<'a> backend::Backend<'a> for Empty {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
     T: 'a
   {
     Ok(())
   }
 
   #[allow(unused_variables)]
-  fn call(&mut self, call: &crate::Call<Box<dyn erased_serde::Serialize>>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
+  fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
     let ser = Self::serialize(&call.payload).unwrap();
     println!("{}: {}", call.procedure, ser);
     Ok(crate::Reply { payload: ser })
   }
 
-  fn serialize(from: &dyn erased_serde::Serialize) -> Result<String, backend::Error> {
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<String, backend::Error> {
     serde_json::to_string(from).map_err(|e| backend::Error::Serialize(Some(e.to_string())))
   }
 

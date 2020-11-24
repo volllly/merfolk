@@ -5,65 +5,45 @@ fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
   Mer::new().with_backend(backends::Empty::new()).with_frontnd(frontends::Empty::new()).build()
 }
 
-fn setup_http<'a>() -> Mer<'a, backends::Http, frontends::Empty> {
+fn setup_http<'a>() -> Mer<'a, backends::Http<'a>, frontends::Empty> {
   Mer::new().with_backend(backends::Http::new(Some("http://127.0.0.1:8080".parse::<hyper::Uri>().unwrap()), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)))).with_frontnd(frontends::Empty::new()).build()
 }
 
 #[test]
 fn initializes() {
   setup_empty();
+  setup_http();
 }
-
-// #[test]
-// #[cfg(feature = "backends")]
-// fn empty_trigger_receive() {
-//   use backend::*;
-//   let mut empty = backends::Empty::new();
-
-//   #[allow(unused_variables)]
-//   empty
-//     .receiver(|call: &Call<()>| {
-//       println!("called");
-//       Reply { payload: () }
-//     })
-//     .unwrap();
-
-//   empty.trigger();
-// }
 
 #[test]
 #[cfg(feature = "backends")]
 fn empty_call() {
-  use backend::*;
+  use interfaces::Backend;
   let mut empty = backends::Empty::new();
 
-  empty.call(&Call { procedure: &"", payload: Box::new(()) }).unwrap();
+  empty.call(&Call { procedure: "".to_string(), payload: <backends::Empty as interfaces::Backend>::serialize(&()).unwrap() }).unwrap();
 }
 
-// #[test]
-// #[cfg(feature = "frontends")]
-// fn empty_register() {
-//   use frontends::*;
-//   let mut mer = setup_empty();
 
-//   assert_eq!(true, mer.register("", &empty::Empty {}).is_ok());
-// }
-
+#[allow(dead_code)]
 fn add(a: i32, b: i32) -> i32 {
   a + b
 }
 
-impl<'a> Caller<'a, backends::Http, frontends::Empty> {
-  fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
-    Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
+impl<'a> Caller<'a, backends::Http<'a>, frontends::Empty> {
+  fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
+    Ok(self.call(&Call { procedure: "add".to_string(), payload: <backends::Http as interfaces::Backend>::serialize(&(a, b)).unwrap() })?.payload)
   }
 }
 
 impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
-  fn add(&self, a: i32, b: i32) -> Result<i32, backend::Error> {
-    Ok(self.call(&Call { procedure: "add", payload: Box::new((a, b)) })?.payload)
+  fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
+    Ok(self.call(&Call { procedure: "add".to_string(), payload: <backends::Empty as interfaces::Backend>::serialize(&(a, b)).unwrap() })?.payload)
   }
 }
+
+
+
 #[test]
 fn frontend_call() {
   let mer = setup_empty();
@@ -84,7 +64,7 @@ fn frontend_receive() {
 
   mer
     .receive(&Call {
-      procedure: "add",
+      procedure: "add".to_string(),
       payload: &serde_json::to_string(&(1i32, 2i32)).unwrap(),
     })
     .unwrap();

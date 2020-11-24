@@ -1,4 +1,4 @@
-use crate::interfaces::frontend;
+use crate::interfaces::{backend, frontend};
 
 #[derive(Debug)]
 pub struct Empty {}
@@ -15,20 +15,23 @@ impl Empty {
   }
 }
 
-impl<'a> frontend::Frontend<'a> for Empty {
+impl<'a, B> frontend::Frontend<'a, B> for Empty
+where
+  B: backend::Backend<'a>
+{
   type Intermediate = String;
 
-  fn receive(&self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, frontend::Error> {
-    let ser = self.serialize(call.payload).unwrap();
-    println!("{}: {}", call.procedure, ser);
-    Ok(crate::Reply { payload: Box::new(ser) })
+  fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, frontend::Error> {
+    let (a, b) = B::deserialize::<(i32, i32)>(call.payload).unwrap();
+    let r = a + b;
+    Ok(crate::Reply { payload: B::serialize(&r).unwrap() })
   }
 
-  fn serialize(&self, from: &dyn erased_serde::Serialize) -> Result<String, frontend::Error> {
-    serde_json::to_string(from).map_err(|e| frontend::Error::Serialize(Some(e.to_string())))
-  }
+  // fn serialize(&self, from: &B::Intermediate) -> Result<String, frontend::Error> {
+  //   serde_json::to_string(from).map_err(|e| frontend::Error::Serialize(Some(e.to_string())))
+  // }
 
-  fn deserialize<T: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<T, frontend::Error> {
-    serde_json::from_str(&from).map_err(|e| frontend::Error::Deserialize(Some(e.to_string())))
-  }
+  // fn deserialize<D: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<D, frontend::Error> {
+  //   serde_json::from_str(&from).map_err(|e| frontend::Error::Deserialize(Some(e.to_string())))
+  // }
 }
