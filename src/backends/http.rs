@@ -1,5 +1,5 @@
+use crate::interfaces;
 use crate::interfaces::backend;
-
 use hyper::{
   client::{connect::dns::GaiResolver, HttpConnector},
   Body, Client, Method, Request, StatusCode,
@@ -9,38 +9,36 @@ use hyper::http::Uri;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Response, Server};
 use std::{net::SocketAddr};
-use std::sync::{Arc};
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::sync;
-use tokio::sync::{mpsc, oneshot, Mutex};
 
-pub struct Http<'a> {
+fn is_sync<T: Sync>() {}
+fn is_send<T: Send>() {}
+
+pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
   speak: Option<Uri>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Box<dyn Fn(Arc<crate::Call<&String>>) -> Arc<Result<crate::Reply<String>, crate::Error>> + 'a>>,
+  receiver: Option<Arc<sync::Mutex<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<sync::Mutex<Result<crate::Reply<String>, crate::Error>>> + Send>>>,
   runtime: Runtime,
-  channel: (mpsc::Sender<(crate::Call<String>, oneshot::Sender<crate::Reply<String>>)>, Arc<Mutex<mpsc::Receiver<(crate::Call<String>, oneshot::Sender<crate::Reply<String>>)>>>),
 }
 
-impl<'a> Default for Http<'a> {
+impl Default for Http {
   fn default() -> Self {
-    let channel = mpsc::channel(1);
-
     Http {
       client: Client::new(),
       speak: None,
       listen: None,
       receiver: None,
       runtime: Runtime::new().unwrap(),
-      channel: (channel.0, Arc::new(sync::Mutex::new(channel.1)))
     }
   }
 }
 
-impl<'a> Http<'a> {
-  pub fn new(speak: Option<Uri>, listen: Option<SocketAddr>) -> Http<'a> {
+impl Http {
+  pub fn new(speak: Option<Uri>, listen: Option<SocketAddr>) -> Http {
     Http { speak, listen, ..Http::default() }
   }
 }
@@ -49,21 +47,21 @@ impl<'a> Http<'a> {
 
 // }
 
-impl<'a> backend::Backend<'a> for Http<'a> {
+impl<'a> interfaces::Backend<'a> for Http {
   type Intermediate = String;
 
   fn start(&mut self) -> Result<(), backend::Error> {
     let listen = self.listen.unwrap();
-    let tx = self.channel.0.clone();
+    let receiver = Arc::clone(self.receiver.as_ref().unwrap());
 
     self.runtime.spawn(async move {
-      let tx = tx.clone();
+      let receiver = receiver.clone();
 
       Server::bind(&listen).serve(make_service_fn(move |_| {
-      let tx = tx.clone();
+      let receiver = receiver.clone();
       async move {
           Ok::<_, hyper::Error>(service_fn(move |request: Request<Body>| {
-            let tx = tx.clone();
+            let receiver = receiver.clone();
             async move {
               let procedure = if let Some(procedure) = request.headers().get("Procedure") {
                 match procedure.to_str() {
@@ -80,19 +78,17 @@ impl<'a> backend::Backend<'a> for Http<'a> {
                 Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
               };
 
-              let (handle, rx) = oneshot::channel::<crate::Reply<String>>();
-
-              tx.send((crate::Call {
+              let reply_mutex = receiver.lock().await(Arc::new(Mutex::new(crate::Call {
                 procedure,
-                payload: body,
-              }, handle)).await;
+                payload: &body,
+              })));
 
-              let reply = rx.await;
+              let reply = &*reply_mutex.lock().await;
               
               match reply {
-                Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
+                Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))).unwrap()),
 
-                Ok(reply) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from(reply.payload)).unwrap())
+                Ok(reply) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned())).unwrap())
               }
             }
           }))
@@ -108,27 +104,17 @@ impl<'a> backend::Backend<'a> for Http<'a> {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
-    T: 'a,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error> + Send,
+    T: 'static,
   {
-    self.receiver = Some(Box::new(move |call: Arc<crate::Call<&String>>| { 
-      match receiver(call.as_ref()) {
-        Ok(reply) => Arc::new(Ok(crate::Reply {
+    self.receiver = Some(Arc::new(sync::Mutex::new(move |call: Arc<Mutex<crate::Call<&String>>>| { 
+      match receiver(&*call.lock().unwrap()) {
+        Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply {
           payload: reply.payload
-        })),
-        Err(e) => Arc::new(Err::<crate::Reply<String>, crate::Error>(e))
+        }))),
+        Err(e) => Arc::new(sync::Mutex::new(Err::<crate::Reply<String>, crate::Error>(e)))
       }
-    }));
-    
-    // let rx = Arc::clone(&self.channel.1);
-    // let future = async move {
-    //   loop {
-    //     let mut rx_mutex = rx.lock().await;
-    //     let (call, tx) = rx_mutex.recv().await.unwrap();
-    //     let reply = receiver(&crate::Call {procedure: call.procedure, payload: &call.payload}).unwrap();
-    //     tx.send(crate::Reply { payload: reply.payload });
-    //   }
-    // };
+    })));
 
     Ok(())
   }

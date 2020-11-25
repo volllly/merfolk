@@ -6,7 +6,7 @@ pub enum Error {
   Deserialize(Option<String>),
 }
 
-pub trait Frontend<'a, B> where B: backend::Backend<'a> {
+pub trait Frontend<'a, B> : Send where B: backend::Backend<'a> {
   type Intermediate: serde::Serialize + serde::Deserialize<'a>;
 
   fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error>;

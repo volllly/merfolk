@@ -5,7 +5,7 @@ fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
   Mer::new().with_backend(backends::Empty::new()).with_frontnd(frontends::Empty::new()).build()
 }
 
-fn setup_http<'a>() -> Mer<'a, backends::Http<'a>, frontends::Empty> {
+fn setup_http<'a>() -> Mer<'a, backends::Http, frontends::Empty> {
   Mer::new().with_backend(backends::Http::new(Some("http://127.0.0.1:8080".parse::<hyper::Uri>().unwrap()), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)))).with_frontnd(frontends::Empty::new()).build()
 }
 
@@ -30,7 +30,7 @@ fn add(a: i32, b: i32) -> i32 {
   a + b
 }
 
-impl<'a> Caller<'a, backends::Http<'a>, frontends::Empty> {
+impl<'a> Caller<'a, backends::Http, frontends::Empty> {
   fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
     Ok(self.call(&Call { procedure: "add".to_string(), payload: <backends::Http as interfaces::Backend>::serialize(&(a, b)).unwrap() })?.payload)
   }
@@ -76,5 +76,12 @@ fn backend_receive() {
 
   mer.start().unwrap();
 
+  // let mut mer2 = Mer::new().with_backend(backends::Http::new(Some("http://127.0.0.1:8081".parse::<hyper::Uri>().unwrap()), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081)))).with_frontnd(frontends::Empty::new()).build();
+
+  // mer2.start().unwrap();
+
+  loop {
+    std::thread::sleep(std::time::Duration::from_millis(100));
+  }
   println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
 }

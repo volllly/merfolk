@@ -7,10 +7,11 @@ pub enum Error {
   Call(Option<String>),
   Other,
 }
+unsafe impl Send for Error {}
 
 // EXPRTIMENTAL: pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
 
-pub trait Backend<'a> {
+pub trait Backend<'a> : Send {
   type Intermediate: serde::Serialize + serde::Deserialize<'a>;
 
   fn start(&mut self) -> Result<(), Error>;
@@ -18,8 +19,8 @@ pub trait Backend<'a> {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
-    T: 'a;
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error> + Send,
+    T: 'static;
 
   fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Error>;
 
