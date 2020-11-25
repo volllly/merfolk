@@ -17,7 +17,7 @@ impl Empty {
 
 impl<'a, B> frontend::Frontend<'a, B> for Empty
 where
-  B: backend::Backend<'a>
+  B: backend::Backend<'a>,
 {
   type Intermediate = String;
 

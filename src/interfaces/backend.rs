@@ -11,7 +11,7 @@ unsafe impl Send for Error {}
 
 // EXPRTIMENTAL: pub trait Receiver<T> = Fn(&Call<T>) -> Reply<T>;
 
-pub trait Backend<'a> : Send {
+pub trait Backend<'a>: Send {
   type Intermediate: serde::Serialize + serde::Deserialize<'a>;
 
   fn start(&mut self) -> Result<(), Error>;

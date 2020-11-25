@@ -1,7 +1,7 @@
 use crate::interfaces::backend;
 
 pub struct Empty {
-  started: bool
+  started: bool,
 }
 
 impl Default for Empty {
@@ -40,7 +40,7 @@ impl<'a> backend::Backend<'a> for Empty {
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
     T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
-    T: 'a
+    T: 'a,
   {
     Ok(())
   }
@@ -56,7 +56,10 @@ impl<'a> backend::Backend<'a> for Empty {
     serde_json::to_string(from).map_err(|e| backend::Error::Serialize(Some(e.to_string())))
   }
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, backend::Error> where T: for<'de> serde::Deserialize<'de> {
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, backend::Error>
+  where
+    T: for<'de> serde::Deserialize<'de>,
+  {
     serde_json::from_str(&from).map_err(|e| backend::Error::Deserialize(Some(e.to_string() + "; from: " + from)))
   }
 }

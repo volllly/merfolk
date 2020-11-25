@@ -8,7 +8,7 @@ use hyper::{
 use hyper::http::Uri;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Response, Server};
-use std::{net::SocketAddr};
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::sync;
@@ -54,43 +54,43 @@ impl<'a> interfaces::Backend<'a> for Http {
     self.runtime.spawn(async move {
       let receiver = receiver.clone();
 
-      Server::bind(&listen).serve(make_service_fn(move |_| {
-      let receiver = receiver.clone();
-      async move {
-          Ok::<_, hyper::Error>(service_fn(move |request: Request<Body>| {
-            let receiver = receiver.clone();
-            async move {
-              let procedure = if let Some(procedure) = request.headers().get("Procedure") {
-                match procedure.to_str() {
-                  Ok(procedure) => procedure.to_owned(),
-                  Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap())
+      Server::bind(&listen)
+        .serve(make_service_fn(move |_| {
+          let receiver = receiver.clone();
+          async move {
+            Ok::<_, hyper::Error>(service_fn(move |request: Request<Body>| {
+              let receiver = receiver.clone();
+              async move {
+                let procedure = if let Some(procedure) = request.headers().get("Procedure") {
+                  match procedure.to_str() {
+                    Ok(procedure) => procedure.to_owned(),
+                    Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
+                  }
+                } else {
+                  return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from("No Procedure provided")).unwrap());
+                };
+
+                let body_bytes = hyper::body::to_bytes(request.into_body()).await.unwrap();
+                let body = match String::from_utf8(body_bytes.to_vec()) {
+                  Ok(body) => body,
+                  Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
+                };
+
+                let reply_mutex = receiver.lock().await(Arc::new(Mutex::new(crate::Call { procedure, payload: &body })));
+
+                let reply = &*reply_mutex.lock().await;
+
+                match reply {
+                  Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))).unwrap()),
+
+                  Ok(reply) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned())).unwrap()),
                 }
-              } else {
-                return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from("No Procedure provided")).unwrap());
-              };
-
-              let body_bytes = hyper::body::to_bytes(request.into_body()).await.unwrap();
-              let body = match String::from_utf8(body_bytes.to_vec()) {
-                Ok(body) => body,
-                Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
-              };
-
-              let reply_mutex = receiver.lock().await(Arc::new(Mutex::new(crate::Call {
-                procedure,
-                payload: &body,
-              })));
-
-              let reply = &*reply_mutex.lock().await;
-              
-              match reply {
-                Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))).unwrap()),
-
-                Ok(reply) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned())).unwrap())
               }
-            }
-          }))
-        }
-      })).await.unwrap();
+            }))
+          }
+        }))
+        .await
+        .unwrap();
     });
     Ok(())
   }
@@ -104,13 +104,9 @@ impl<'a> interfaces::Backend<'a> for Http {
     T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error> + Send,
     T: 'static,
   {
-    self.receiver = Some(Arc::new(sync::Mutex::new(move |call: Arc<Mutex<crate::Call<&String>>>| { 
-      match receiver(&*call.lock().unwrap()) {
-        Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply {
-          payload: reply.payload
-        }))),
-        Err(e) => Arc::new(sync::Mutex::new(Err::<crate::Reply<String>, crate::Error>(e)))
-      }
+    self.receiver = Some(Arc::new(sync::Mutex::new(move |call: Arc<Mutex<crate::Call<&String>>>| match receiver(&*call.lock().unwrap()) {
+      Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply { payload: reply.payload }))),
+      Err(e) => Arc::new(sync::Mutex::new(Err::<crate::Reply<String>, crate::Error>(e))),
     })));
 
     Ok(())
@@ -143,7 +139,7 @@ impl<'a> interfaces::Backend<'a> for Http {
     }
   }
 
-  fn serialize<T : serde::Serialize>(from: &T) -> Result<String, backend::Error> {
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<String, backend::Error> {
     serde_json::to_string(from).map_err(|e| backend::Error::Serialize(Some(e.to_string())))
   }
 
@@ -154,4 +150,3 @@ impl<'a> interfaces::Backend<'a> for Http {
     serde_json::from_str(&from).map_err(|e| backend::Error::Deserialize(Some(e.to_string() + "; from: " + from)))
   }
 }
-

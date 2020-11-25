@@ -8,12 +8,12 @@ use alloc::sync::Arc;
 #[cfg(not(feature = "threadsafe"))]
 use core::cell::RefCell;
 
-use core::{marker::PhantomData};
+use core::marker::PhantomData;
 
-#[cfg(feature = "std")]
-use std::sync::Mutex;
 #[cfg(not(feature = "std"))]
 use spin::Mutex;
+#[cfg(feature = "std")]
+use std::sync::Mutex;
 
 #[cfg(test)]
 mod tests;
@@ -149,7 +149,6 @@ macro_rules! access_mut {
   };
 }
 
-
 pub struct Caller<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
   call: Box<dyn Fn(&Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, interfaces::backend::Error> + 'a>,
@@ -157,12 +156,17 @@ pub struct Caller<'a, B: interfaces::Backend<'a>> {
 
 pub trait AutomaticCall<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error> where R: for<'de> serde::Deserialize<'de> ;
+  fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error>
+  where
+    R: for<'de> serde::Deserialize<'de>;
 }
 
 impl<'a, B: interfaces::Backend<'a>> AutomaticCall<'a, B> for Caller<'a, B> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error> where R: for<'de> serde::Deserialize<'de>  {
+  fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error>
+  where
+    R: for<'de> serde::Deserialize<'de>,
+  {
     let reply = (self.call)(call)?;
     Ok(Reply {
       payload: B::deserialize(&reply.payload)?,
@@ -205,11 +209,11 @@ where
     let backend = smart_pointer!(self.backend.unwrap());
     let frontend = smart_pointer!(self.frontend.unwrap());
 
-    
     let frontend_receiver = clone!(frontend);
-    access_mut!(backend).unwrap().receiver(move |call: &Call<&B::Intermediate>| {
-      Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
-    }).unwrap();
+    access_mut!(backend)
+      .unwrap()
+      .receiver(move |call: &Call<&B::Intermediate>| Ok(access!(frontend_receiver).unwrap().receive(call).unwrap()))
+      .unwrap();
 
     Mer {
       backend: clone!(backend),
