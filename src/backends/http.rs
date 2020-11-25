@@ -128,7 +128,7 @@ impl<'a> interfaces::Backend<'a> for Http {
           .method(Method::POST)
           .uri(uri)
           .header("Procedure", &call.procedure)
-          .body(Body::from(Self::serialize(&call.payload)?))
+          .body(Body::from(call.payload.clone()))
           .map_err(|e| backend::Error::Call(Some(e.to_string())))?;
 
         let result = self.client.request(request).await;

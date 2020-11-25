@@ -46,9 +46,9 @@ impl<'a> backend::Backend<'a> for Empty {
 
   #[allow(unused_variables)]
   fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
-    let ser = Self::serialize(&call.payload).unwrap();
-    println!("{}: {}", call.procedure, ser);
-    Ok(crate::Reply { payload: ser })
+    //let ser = Self::serialize(&call.payload).unwrap();
+    println!("{}: {}", call.procedure, call.payload);
+    Ok(crate::Reply { payload: call.payload.clone() })
   }
 
   fn serialize<T: serde::Serialize>(from: &T) -> Result<String, backend::Error> {
