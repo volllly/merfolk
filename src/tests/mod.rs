@@ -40,7 +40,7 @@ fn add(a: i32, b: i32) -> i32 {
   a + b
 }
 
-impl<'a> Caller<'a, backends::Http, frontends::Empty> {
+impl<'a> Caller<'a, backends::Http> {
   fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
     Ok(
       self
@@ -53,7 +53,7 @@ impl<'a> Caller<'a, backends::Http, frontends::Empty> {
   }
 }
 
-impl<'a> Caller<'a, backends::Empty, frontends::Empty> {
+impl<'a> Caller<'a, backends::Empty> {
   fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
     Ok(
       self
