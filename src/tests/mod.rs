@@ -41,7 +41,7 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 impl<'a, B: interfaces::Backend<'a>> Caller<'a, B> {
-  fn add(&self, a: i32, b: i32) -> crate::Result<i32> {
+  fn add(&self, a: i32, b: i32) -> Result<i32, B::Error> {
     Ok(
       self
         .call(&Call {

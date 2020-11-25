@@ -1,33 +1,20 @@
-use snafu::Snafu;
-
-#[derive(Debug, Snafu)]
-pub enum Error {
-  Serialize { serializer: String },
-  Deserialize { deserializer: String },
-  SpeakingDisabled,
-  Listen,
-  Call { inner: String },
-  Other,
-}
-
-pub type Result<T, E = Error> = core::result::Result<T, E>;
-
 pub trait Backend<'a>: Send {
   type Intermediate: serde::Serialize + serde::Deserialize<'a>;
+  type Error: snafu::Error + core::fmt::Debug;
 
-  fn start(&mut self) -> Result<()>;
-  fn stop(&mut self) -> Result<()>;
+  fn start(&mut self) -> Result<(), Self::Error>;
+  fn stop(&mut self) -> Result<(), Self::Error>;
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> + Send,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send,
     T: 'static;
 
-  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>>;
+  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error>;
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate>;
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate, Self::Error>;
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, Self::Error>
   where
     T: for<'de> serde::Deserialize<'de>;
 }

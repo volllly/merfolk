@@ -1,7 +1,6 @@
 use crate::interfaces;
-use crate::interfaces::backend::{Error, Result};
 
-use snafu::{ResultExt, Snafu};
+use snafu::{OptionExt, ResultExt, Snafu};
 
 use hyper::{
   client::{connect::dns::GaiResolver, HttpConnector},
@@ -17,8 +16,20 @@ use tokio::runtime::Runtime;
 use tokio::sync;
 
 #[derive(Debug, Snafu)]
-pub enum LocalError {
-  RequestBuilder { source: hyper::Error },
+pub enum Error {
+  Serialize { from: serde_json::Error },
+  Deserialize { from: serde_json::Error },
+  SpeakingDisabled,
+  RequestBuilder { source: hyper::http::Error },
+  ParseResponseBodyBytes { source: hyper::Error },
+  ParseResponseBody { source: std::string::FromUtf8Error },
+  ClientRequest { source: hyper::error::Error },
+  FailedRequest { status: StatusCode },
+  NoListen,
+  NoReceiver,
+  BindServer { source: hyper::error::Error },
+  NoProcedureHeader { source: hyper::http::Error },
+  GetCallLockInReceiver,
 }
 
 pub struct Http {
@@ -26,7 +37,7 @@ pub struct Http {
   speak: Option<Uri>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<sync::Mutex<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<sync::Mutex<Result<crate::Reply<String>>>> + Send>>>,
+  receiver: Option<Arc<sync::Mutex<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<sync::Mutex<Result<crate::Reply<String>, Error>>> + Send>>>,
   runtime: Runtime,
 }
 
@@ -50,10 +61,11 @@ impl Http {
 
 impl<'a> interfaces::Backend<'a> for Http {
   type Intermediate = String;
+  type Error = Error;
 
-  fn start(&mut self) -> Result<()> {
-    let listen = self.listen.unwrap();
-    let receiver = Arc::clone(self.receiver.as_ref().unwrap());
+  fn start(&mut self) -> Result<(), Self::Error> {
+    let listen = self.listen.context(NoListen)?;
+    let receiver = Arc::clone(self.receiver.as_ref().context(NoReceiver)?);
 
     self.runtime.spawn(async move {
       let receiver = receiver.clone();
@@ -68,16 +80,20 @@ impl<'a> interfaces::Backend<'a> for Http {
                 let procedure = if let Some(procedure) = request.headers().get("Procedure") {
                   match procedure.to_str() {
                     Ok(procedure) => procedure.to_owned(),
-                    Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
+                    Err(e) => return Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())),
                   }
                 } else {
-                  return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from("No Procedure provided")).unwrap());
+                  return Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from("No Procedure provided"));
                 };
 
-                let body_bytes = hyper::body::to_bytes(request.into_body()).await.unwrap();
+                let body_bytes = match hyper::body::to_bytes(request.into_body()).await {
+                  Ok(body_bytes) => body_bytes,
+                  Err(e) => return Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())),
+                };
+
                 let body = match String::from_utf8(body_bytes.to_vec()) {
                   Ok(body) => body,
-                  Err(e) => return Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())).unwrap()),
+                  Err(e) => return Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())),
                 };
 
                 let reply_mutex = receiver.lock().await(Arc::new(Mutex::new(crate::Call { procedure, payload: &body })));
@@ -85,9 +101,9 @@ impl<'a> interfaces::Backend<'a> for Http {
                 let reply = &*reply_mutex.lock().await;
 
                 match reply {
-                  Err(e) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))).unwrap()),
+                  Err(e) => Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))),
 
-                  Ok(reply) => Ok::<_, hyper::Error>(Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned())).unwrap()),
+                  Ok(reply) => Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned())),
                 }
               }
             }))
@@ -99,24 +115,31 @@ impl<'a> interfaces::Backend<'a> for Http {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<()> {
+  fn stop(&mut self) -> Result<(), Self::Error> {
     Ok(())
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> + Send,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send,
     T: 'static,
   {
-    self.receiver = Some(Arc::new(sync::Mutex::new(move |call: Arc<Mutex<crate::Call<&String>>>| match receiver(&*call.lock().unwrap()) {
-      Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply { payload: reply.payload }))),
-      Err(e) => Arc::new(sync::Mutex::new(Err(e))),
+    self.receiver = Some(Arc::new(sync::Mutex::new(move |call: Arc<Mutex<crate::Call<&String>>>| {
+      let call = match call.as_ref().lock() {
+        Ok(c) => c,
+        Err(_) => return Arc::new(sync::Mutex::new(Err(Error::GetCallLockInReceiver))),
+      };
+
+      match receiver(&*call) {
+        Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply { payload: reply.payload }))),
+        Err(e) => Arc::new(sync::Mutex::new(Err(e))),
+      }
     })));
 
     Ok(())
   }
 
-  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> {
+  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> {
     match &self.speak {
       None => Err(Error::SpeakingDisabled),
 
@@ -126,33 +149,29 @@ impl<'a> interfaces::Backend<'a> for Http {
           .uri(uri)
           .header("Procedure", &call.procedure)
           .body(Body::from(call.payload.clone()))
-          .map_err(|e| Error::Call { inner: e.to_string() })?;
+          .context(RequestBuilder)?;
 
-        let result = self.client.request(request).await;
-
-        let response = result.map_err(|e| Error::Call { inner: e.to_string() })?;
+        let response = self.client.request(request).await.context(ClientRequest)?;
         let status = response.status();
-        let body_bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body = String::from_utf8(body_bytes.to_vec());
+        let body_bytes = hyper::body::to_bytes(response.into_body()).await.context(ParseResponseBodyBytes)?;
+        let body = String::from_utf8(body_bytes.to_vec()).context(ParseResponseBody)?;
 
         match status {
-          StatusCode::OK => Ok(crate::Reply { payload: body.unwrap() }),
-          _ => Err(Error::Call {
-            inner: format!("invalid statuscode: {} returned", status),
-          }),
+          StatusCode::OK => Ok(crate::Reply { payload: body }),
+          _ => Err(Error::FailedRequest { status }),
         }
       }),
     }
   }
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<String> {
-    serde_json::to_string(from).map_err(|e| Error::Serialize { serializer: e.to_string() })
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<String, Self::Error> {
+    serde_json::to_string(from).map_err(|e| Error::Serialize { from: e })
   }
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, Self::Error>
   where
     T: for<'de> serde::Deserialize<'de>,
   {
-    serde_json::from_str(&from).map_err(|e| Error::Deserialize { deserializer: e.to_string() })
+    serde_json::from_str(&from).map_err(|e| Error::Deserialize { from: e })
   }
 }

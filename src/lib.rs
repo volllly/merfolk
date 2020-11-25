@@ -15,8 +15,6 @@ use spin::Mutex;
 #[cfg(feature = "std")]
 use std::sync::Mutex;
 
-use snafu::{ResultExt, Snafu};
-
 #[cfg(test)]
 mod tests;
 
@@ -29,14 +27,13 @@ pub mod interfaces;
 
 use helpers::builder::*;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-  MakeCall { source: interfaces::backend::Error },
-  ReceiveCall { source: interfaces::frontend::Error },
-  Start { source: interfaces::backend::Error },
-  Stop { source: interfaces::backend::Error },
-}
-pub type Result<T, E = Error> = core::result::Result<T, E>;
+// #[derive(Debug, Snafu)]
+// pub enum Error<B, F> where B: snafu::Error, F: snafu::Error {
+//   MakeCall { source: B },
+//   ReceiveCall { source: F },
+//   Start { source: B },
+//   Stop { source: B },
+// }
 
 pub struct Builder<B, F, BACKEND, FRONTEND>
 where
@@ -158,25 +155,25 @@ macro_rules! access_mut {
 
 pub struct Caller<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
-  call: Box<dyn Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>,
+  call: Box<dyn Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'a>,
 }
 
 pub trait AutomaticCall<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<&B::Intermediate>) -> Result<Reply<R>>
+  fn call<R>(&self, call: &Call<&B::Intermediate>) -> Result<Reply<R>, B::Error>
   where
     R: for<'de> serde::Deserialize<'de>;
 }
 
 impl<'a, B: interfaces::Backend<'a>> AutomaticCall<'a, B> for Caller<'a, B> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<&B::Intermediate>) -> Result<Reply<R>>
+  fn call<R>(&self, call: &Call<&B::Intermediate>) -> Result<Reply<R>, B::Error>
   where
     R: for<'de> serde::Deserialize<'de>,
   {
     let reply = (self.call)(call)?;
     Ok(Reply {
-      payload: B::deserialize(&reply.payload).context(MakeCall)?,
+      payload: B::deserialize(&reply.payload)?,
     })
   }
 }
@@ -227,7 +224,7 @@ where
       frontend,
 
       call: Caller {
-        call: Box::new(move |call: &Call<&B::Intermediate>| access_mut!(backend).unwrap().call(call).context(MakeCall)),
+        call: Box::new(move |call: &Call<&B::Intermediate>| access_mut!(backend).unwrap().call(call)),
       },
     }
   }
@@ -245,15 +242,15 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
     }
   }
 
-  pub fn start(&mut self) -> Result<()> {
-    access_mut!(self.backend).unwrap().start().context(Start)
+  pub fn start(&mut self) -> Result<(), B::Error> {
+    access_mut!(self.backend).unwrap().start()
   }
 
-  pub fn stop(&mut self) -> Result<()> {
-    access_mut!(self.backend).unwrap().stop().context(Stop)
+  pub fn stop(&mut self) -> Result<(), B::Error> {
+    access_mut!(self.backend).unwrap().stop()
   }
 
-  pub fn receive(&self, call: &Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>> {
-    access_mut!(self.frontend).unwrap().receive(call).context(ReceiveCall)
+  pub fn receive(&self, call: &Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, F::Error> {
+    access_mut!(self.frontend).unwrap().receive(call)
   }
 }
