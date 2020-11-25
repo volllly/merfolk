@@ -1,3 +1,4 @@
+use crate::interfaces::frontend::Result;
 use crate::interfaces::{backend, frontend};
 
 #[derive(Debug)]
@@ -21,7 +22,7 @@ where
 {
   type Intermediate = String;
 
-  fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, frontend::Error> {
+  fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>> {
     let (a, b) = B::deserialize::<(i32, i32)>(call.payload).unwrap();
     let r = a + b;
     Ok(crate::Reply { payload: B::serialize(&r).unwrap() })

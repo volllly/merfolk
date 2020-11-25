@@ -1,5 +1,4 @@
 use super::*;
-use rand::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
@@ -42,7 +41,7 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 impl<'a, B: interfaces::Backend<'a>> Caller<'a, B> {
-  fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
+  fn add(&self, a: i32, b: i32) -> crate::Result<i32> {
     Ok(
       self
         .call(&Call {

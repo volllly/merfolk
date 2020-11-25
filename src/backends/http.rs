@@ -1,5 +1,8 @@
 use crate::interfaces;
-use crate::interfaces::backend;
+use crate::interfaces::backend::{Error, Result};
+
+use snafu::{ResultExt, Snafu};
+
 use hyper::{
   client::{connect::dns::GaiResolver, HttpConnector},
   Body, Client, Method, Request, StatusCode,
@@ -13,12 +16,17 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::sync;
 
+#[derive(Debug, Snafu)]
+pub enum LocalError {
+  RequestBuilder { source: hyper::Error },
+}
+
 pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
   speak: Option<Uri>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<sync::Mutex<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<sync::Mutex<Result<crate::Reply<String>, crate::Error>>> + Send>>>,
+  receiver: Option<Arc<sync::Mutex<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<sync::Mutex<Result<crate::Reply<String>>>> + Send>>>,
   runtime: Runtime,
 }
 
@@ -43,7 +51,7 @@ impl Http {
 impl<'a> interfaces::Backend<'a> for Http {
   type Intermediate = String;
 
-  fn start(&mut self) -> Result<(), backend::Error> {
+  fn start(&mut self) -> Result<()> {
     let listen = self.listen.unwrap();
     let receiver = Arc::clone(self.receiver.as_ref().unwrap());
 
@@ -91,57 +99,60 @@ impl<'a> interfaces::Backend<'a> for Http {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<(), backend::Error> {
+  fn stop(&mut self) -> Result<()> {
     Ok(())
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
+  fn receiver<T>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error> + Send,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> + Send,
     T: 'static,
   {
     self.receiver = Some(Arc::new(sync::Mutex::new(move |call: Arc<Mutex<crate::Call<&String>>>| match receiver(&*call.lock().unwrap()) {
       Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply { payload: reply.payload }))),
-      Err(e) => Arc::new(sync::Mutex::new(Err::<crate::Reply<String>, crate::Error>(e))),
+      Err(e) => Arc::new(sync::Mutex::new(Err(e))),
     })));
 
     Ok(())
   }
 
-  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
+  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> {
     match &self.speak {
-      None => Err(backend::Error::Speak(Some(String::from("Speaking is disabled.")))),
+      None => Err(Error::SpeakingDisabled),
+
       Some(uri) => self.runtime.block_on(async {
         let request = Request::builder()
           .method(Method::POST)
           .uri(uri)
           .header("Procedure", &call.procedure)
           .body(Body::from(call.payload.clone()))
-          .map_err(|e| backend::Error::Call(Some(e.to_string())))?;
+          .map_err(|e| Error::Call { inner: e.to_string() })?;
 
         let result = self.client.request(request).await;
 
-        let response = result.map_err(|e| backend::Error::Call(Some(e.to_string())))?;
+        let response = result.map_err(|e| Error::Call { inner: e.to_string() })?;
         let status = response.status();
         let body_bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body = String::from_utf8(body_bytes.to_vec());
 
         match status {
           StatusCode::OK => Ok(crate::Reply { payload: body.unwrap() }),
-          _ => Err(backend::Error::Call(Some(String::from("Call returned with statuscode: ") + status.as_str()))),
+          _ => Err(Error::Call {
+            inner: format!("invalid statuscode: {} returned", status),
+          }),
         }
       }),
     }
   }
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<String, backend::Error> {
-    serde_json::to_string(from).map_err(|e| backend::Error::Serialize(Some(e.to_string())))
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<String> {
+    serde_json::to_string(from).map_err(|e| Error::Serialize { serializer: e.to_string() })
   }
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, backend::Error>
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
   where
     T: for<'de> serde::Deserialize<'de>,
   {
-    serde_json::from_str(&from).map_err(|e| backend::Error::Deserialize(Some(e.to_string() + "; from: " + from)))
+    serde_json::from_str(&from).map_err(|e| Error::Deserialize { deserializer: e.to_string() })
   }
 }
