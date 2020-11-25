@@ -1,8 +1,9 @@
 use super::*;
+use rand::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
-  Mer::new().with_backend(backends::Empty::new()).with_frontnd(frontends::Empty::new()).build()
+  Mer::new().with_backend(backends::Empty::new()).with_frontend(frontends::Empty::new()).build()
 }
 
 fn setup_http<'a>(port: u16) -> Mer<'a, backends::Http, frontends::Empty> {
@@ -11,7 +12,7 @@ fn setup_http<'a>(port: u16) -> Mer<'a, backends::Http, frontends::Empty> {
       Some(("http://localhost:".to_string() + &port.to_string()).parse::<hyper::Uri>().unwrap()),
       Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port)),
     ))
-    .with_frontnd(frontends::Empty::new())
+    .with_frontend(frontends::Empty::new())
     .build()
 }
 
@@ -30,7 +31,7 @@ fn empty_call() {
   empty
     .call(&Call {
       procedure: "".to_string(),
-      payload: <backends::Empty as interfaces::Backend>::serialize(&()).unwrap(),
+      payload: &<backends::Empty as interfaces::Backend>::serialize(&()).unwrap(),
     })
     .unwrap();
 }
@@ -40,26 +41,13 @@ fn add(a: i32, b: i32) -> i32 {
   a + b
 }
 
-impl<'a> Caller<'a, backends::Http> {
+impl<'a, B: interfaces::Backend<'a>> Caller<'a, B> {
   fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
     Ok(
       self
         .call(&Call {
           procedure: "add".to_string(),
-          payload: <backends::Http as interfaces::Backend>::serialize(&(a, b)).unwrap(),
-        })?
-        .payload,
-    )
-  }
-}
-
-impl<'a> Caller<'a, backends::Empty> {
-  fn add(&self, a: i32, b: i32) -> Result<i32, interfaces::backend::Error> {
-    Ok(
-      self
-        .call(&Call {
-          procedure: "add".to_string(),
-          payload: <backends::Empty as interfaces::Backend>::serialize(&(a, b)).unwrap(),
+          payload: &B::serialize(&(a, b)).unwrap(),
         })?
         .payload,
     )
@@ -77,7 +65,7 @@ fn frontend_call() {
 fn frontend_http() {
   let mer = Mer::new()
     .with_backend(backends::Http::new(Some("http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap()), None))
-    .with_frontnd(frontends::Empty::new())
+    .with_frontend(frontends::Empty::new())
     .build();
 
   println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
@@ -105,4 +93,36 @@ fn backend_receive() {
   //   std::thread::sleep(std::time::Duration::from_millis(100));
   // }
   println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
+}
+
+#[test]
+fn register_http() {
+  let register = frontends::Register::new();
+  register.register("add", |(a, b)| add(a, b)).unwrap();
+
+  let mut mer = Mer::new()
+    .with_backend(backends::Http::new(
+      Some("http://localhost:8084".parse::<hyper::Uri>().unwrap()),
+      Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084)),
+    ))
+    .with_frontend(register)
+    .build();
+
+  mer.start().unwrap();
+
+  let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
+  assert_eq!(mer.call.add(a, b).unwrap(), a + b);
+}
+
+#[test]
+fn register_in_process() {
+  let register = frontends::Register::new();
+  register.register("add", |(a, b)| add(a, b)).unwrap();
+
+  let mut mer = Mer::new().with_backend(backends::InProcess::new()).with_frontend(register).build();
+
+  mer.start().unwrap();
+
+  let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
+  assert_eq!(mer.call.add(a, b).unwrap(), a + b);
 }

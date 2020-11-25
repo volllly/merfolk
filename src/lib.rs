@@ -58,7 +58,7 @@ where
     }
   }
 
-  pub fn with_frontnd(self, frontend: F) -> Builder<B, F, BACKEND, Set> {
+  pub fn with_frontend(self, frontend: F) -> Builder<B, F, BACKEND, Set> {
     Builder {
       backend_set: self.backend_set,
       frontend_set: PhantomData {},
@@ -151,19 +151,19 @@ macro_rules! access_mut {
 
 pub struct Caller<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
-  call: Box<dyn Fn(&Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, interfaces::backend::Error> + 'a>,
+  call: Box<dyn Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, interfaces::backend::Error> + 'a>,
 }
 
 pub trait AutomaticCall<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error>
+  fn call<R>(&self, call: &Call<&B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error>
   where
     R: for<'de> serde::Deserialize<'de>;
 }
 
 impl<'a, B: interfaces::Backend<'a>> AutomaticCall<'a, B> for Caller<'a, B> {
   #[allow(clippy::type_complexity)]
-  fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error>
+  fn call<R>(&self, call: &Call<&B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error>
   where
     R: for<'de> serde::Deserialize<'de>,
   {
@@ -220,7 +220,7 @@ where
       frontend,
 
       call: Caller {
-        call: Box::new(move |call: &Call<B::Intermediate>| access_mut!(backend).unwrap().call(call)),
+        call: Box::new(move |call: &Call<&B::Intermediate>| access_mut!(backend).unwrap().call(call)),
       },
     }
   }

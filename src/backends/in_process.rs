@@ -1,55 +1,46 @@
+use crate::interfaces;
 use crate::interfaces::backend;
 
-pub struct Empty {
-  started: bool,
+pub struct InProcess {
+  #[allow(clippy::type_complexity)]
+  receiver: Option<Box<dyn Fn(&crate::Call<&String>) -> Result<crate::Reply<String>, crate::Error> + Send>>,
 }
 
-impl Default for Empty {
+impl Default for InProcess {
   fn default() -> Self {
-    Empty { started: false }
+    InProcess { receiver: None }
   }
 }
 
-impl Empty {
-  pub fn new() -> Empty {
-    Empty::default()
-  }
-
-  pub fn trigger(self) {
-    // self.receiver.unwrap()(&crate::Call {
-    //   procedure: &"",
-    //   payload: (),
-    // });
+impl InProcess {
+  pub fn new() -> InProcess {
+    InProcess::default()
   }
 }
 
-impl<'a> backend::Backend<'a> for Empty {
+impl<'a> interfaces::Backend<'a> for InProcess {
   type Intermediate = String;
 
   fn start(&mut self) -> Result<(), backend::Error> {
-    self.started = true;
     Ok(())
   }
 
   fn stop(&mut self) -> Result<(), backend::Error> {
-    self.started = false;
     Ok(())
   }
 
-  #[allow(unused_variables)]
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,
-    T: 'a,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error> + Send,
+    T: 'static,
   {
+    self.receiver = Some(Box::new(receiver));
+
     Ok(())
   }
 
-  #[allow(unused_variables)]
   fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
-    //let ser = Self::serialize(&call.payload).unwrap();
-    println!("{}: {}", call.procedure, call.payload);
-    Ok(crate::Reply { payload: call.payload.clone() })
+    self.receiver.as_ref().unwrap()(call).map_err(|e| backend::Error::Deserialize(Some(format!("{:?}", e))))
   }
 
   fn serialize<T: serde::Serialize>(from: &T) -> Result<String, backend::Error> {

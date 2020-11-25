@@ -40,10 +40,6 @@ impl Http {
   }
 }
 
-// async fn handle(request: Request<Body>) -> Result<Response<Body>, Infallible> {
-
-// }
-
 impl<'a> interfaces::Backend<'a> for Http {
   type Intermediate = String;
 
@@ -112,8 +108,7 @@ impl<'a> interfaces::Backend<'a> for Http {
     Ok(())
   }
 
-  #[allow(unused_variables)]
-  fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
+  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, backend::Error> {
     match &self.speak {
       None => Err(backend::Error::Speak(Some(String::from("Speaking is disabled.")))),
       Some(uri) => self.runtime.block_on(async {

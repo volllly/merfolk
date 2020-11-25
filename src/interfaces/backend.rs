@@ -22,7 +22,7 @@ pub trait Backend<'a>: Send {
     T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error> + Send,
     T: 'static;
 
-  fn call(&mut self, call: &crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Error>;
+  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Error>;
 
   fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate, Error>;
 

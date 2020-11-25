@@ -26,12 +26,4 @@ where
     let r = a + b;
     Ok(crate::Reply { payload: B::serialize(&r).unwrap() })
   }
-
-  // fn serialize(&self, from: &B::Intermediate) -> Result<String, frontend::Error> {
-  //   serde_json::to_string(from).map_err(|e| frontend::Error::Serialize(Some(e.to_string())))
-  // }
-
-  // fn deserialize<D: serde::Deserialize<'a>>(&self, from: &'a Self::Intermediate) -> Result<D, frontend::Error> {
-  //   serde_json::from_str(&from).map_err(|e| frontend::Error::Deserialize(Some(e.to_string())))
-  // }
 }
