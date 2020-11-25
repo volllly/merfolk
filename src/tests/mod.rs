@@ -5,11 +5,11 @@ fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
   Mer::new().with_backend(backends::Empty::new()).with_frontnd(frontends::Empty::new()).build()
 }
 
-fn setup_http<'a>() -> Mer<'a, backends::Http, frontends::Empty> {
+fn setup_http<'a>(port: u16) -> Mer<'a, backends::Http, frontends::Empty> {
   Mer::new()
     .with_backend(backends::Http::new(
       Some("http://127.0.0.1:8080".parse::<hyper::Uri>().unwrap()),
-      Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)),
+      Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port)),
     ))
     .with_frontnd(frontends::Empty::new())
     .build()
@@ -18,7 +18,7 @@ fn setup_http<'a>() -> Mer<'a, backends::Http, frontends::Empty> {
 #[test]
 fn initializes() {
   setup_empty();
-  setup_http();
+  setup_http(8080);
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn frontend_receive() {
 
 #[test]
 fn backend_receive() {
-  let mut mer = setup_http();
+  let mut mer = setup_http(8081);
 
   mer.start().unwrap();
 
