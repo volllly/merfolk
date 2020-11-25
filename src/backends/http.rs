@@ -13,9 +13,6 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::sync;
 
-fn is_sync<T: Sync>() {}
-fn is_send<T: Send>() {}
-
 pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
   speak: Option<Uri>,

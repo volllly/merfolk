@@ -36,6 +36,7 @@ impl<'a> backend::Backend<'a> for Empty {
     Ok(())
   }
 
+  #[allow(unused_variables)]
   fn receiver<T>(&mut self, receiver: T) -> Result<(), backend::Error>
   where
     T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, crate::Error>,

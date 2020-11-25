@@ -2,9 +2,13 @@
 
 extern crate alloc;
 
+#[cfg(not(feature = "threadsafe"))]
 use alloc::rc::Rc;
 use alloc::sync::Arc;
-use core::{cell::RefCell, marker::PhantomData};
+#[cfg(not(feature = "threadsafe"))]
+use core::cell::RefCell;
+
+use core::{marker::PhantomData};
 
 #[cfg(feature = "std")]
 use std::sync::Mutex;
@@ -146,11 +150,9 @@ macro_rules! access_mut {
 }
 
 
-pub struct Caller<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> {
+pub struct Caller<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
   call: Box<dyn Fn(&Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, interfaces::backend::Error> + 'a>,
-  frontend: SmartPointer<F>,
-  backend: SmartPointer<B>,
 }
 
 pub trait AutomaticCall<'a, B: interfaces::Backend<'a>> {
@@ -158,7 +160,7 @@ pub trait AutomaticCall<'a, B: interfaces::Backend<'a>> {
   fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error> where R: for<'de> serde::Deserialize<'de> ;
 }
 
-impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> AutomaticCall<'a, B> for Caller<'a, B, F> {
+impl<'a, B: interfaces::Backend<'a>> AutomaticCall<'a, B> for Caller<'a, B> {
   #[allow(clippy::type_complexity)]
   fn call<R>(&self, call: &Call<B::Intermediate>) -> Result<Reply<R>, interfaces::backend::Error> where R: for<'de> serde::Deserialize<'de>  {
     let reply = (self.call)(call)?;
@@ -189,7 +191,7 @@ where
   frontend: SmartPointer<F>,
 
   #[allow(dead_code)]
-  call: Caller<'a, B, F>,
+  call: Caller<'a, B>,
 }
 
 impl<'a, B, F> Builder<B, F, Set, Set>
@@ -204,7 +206,6 @@ where
     let frontend = smart_pointer!(self.frontend.unwrap());
 
     
-    // Fn(&crate::Call<Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>
     let frontend_receiver = clone!(frontend);
     access_mut!(backend).unwrap().receiver(move |call: &Call<&B::Intermediate>| {
       Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
@@ -212,11 +213,9 @@ where
 
     Mer {
       backend: clone!(backend),
-      frontend: clone!(frontend),
+      frontend,
 
       call: Caller {
-        frontend,
-        backend: clone!(backend),
         call: Box::new(move |call: &Call<B::Intermediate>| access_mut!(backend).unwrap().call(call)),
       },
     }
