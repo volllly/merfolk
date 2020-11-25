@@ -8,7 +8,7 @@ fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
 fn setup_http<'a>(port: u16) -> Mer<'a, backends::Http, frontends::Empty> {
   Mer::new()
     .with_backend(backends::Http::new(
-      Some("http://127.0.0.1:8080".parse::<hyper::Uri>().unwrap()),
+      Some(("http://localhost:".to_string() + &port.to_string()).parse::<hyper::Uri>().unwrap()),
       Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port)),
     ))
     .with_frontnd(frontends::Empty::new())
