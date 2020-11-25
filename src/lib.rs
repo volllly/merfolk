@@ -5,6 +5,10 @@ extern crate alloc;
 use alloc::rc::Rc;
 use alloc::sync::Arc;
 use core::{cell::RefCell, marker::PhantomData};
+
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+#[cfg(not(feature = "std"))]
 use spin::Mutex;
 
 #[cfg(test)]
@@ -72,12 +76,81 @@ pub struct Reply<T> {
 }
 unsafe impl<T> Send for Reply<T> where T: Send {}
 
+#[cfg(feature = "threadsafe")]
+struct SmartPointer<T>(Arc<Mutex<T>>);
+#[cfg(not(feature = "threadsafe"))]
+struct SmartPointer<T>(Rc<RefCell<T>>);
+unsafe impl<T> Send for SmartPointer<T> {}
+
+#[cfg(feature = "threadsafe")]
+macro_rules! smart_pointer {
+  ($x:expr) => {
+    SmartPointer(Arc::new(Mutex::new($x)))
+  };
+}
+
+#[cfg(not(feature = "threadsafe"))]
+macro_rules! smart_pointer {
+  ($x:expr) => {
+    SmartPointer(Rc::new(RefCell::new($x)))
+  };
+}
+
+#[cfg(feature = "threadsafe")]
+macro_rules! clone {
+  ($x:expr) => {
+    SmartPointer($x.0.clone())
+  };
+}
+
+#[cfg(all(feature = "threadsafe", feature = "std"))]
+macro_rules! access {
+  ($x:expr) => {
+    $x.0.lock()
+  };
+}
+
+#[cfg(all(feature = "threadsafe", not(feature = "std")))]
+macro_rules! access {
+  ($x:expr) => {
+    Ok(*$x.0.lock())
+  };
+}
+
+#[cfg(feature = "threadsafe")]
+macro_rules! access_mut {
+  ($x:expr) => {
+    access!($x)
+  };
+}
+
+#[cfg(not(feature = "threadsafe"))]
+macro_rules! clone {
+  ($x:expr) => {
+    SmartPointer($x.0.clone())
+  };
+}
+
+#[cfg(not(feature = "threadsafe"))]
+macro_rules! access {
+  ($x:expr) => {
+    $x.0.borrow()
+  };
+}
+
+#[cfg(not(feature = "threadsafe"))]
+macro_rules! access_mut {
+  ($x:expr) => {
+    $x.0.borrow_mut()
+  };
+}
+
 
 pub struct Caller<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> {
   #[allow(clippy::type_complexity)]
   call: Box<dyn Fn(&Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, interfaces::backend::Error> + 'a>,
-  frontend: Arc<Mutex<F>>,
-  backend: Arc<Mutex<B>>,
+  frontend: SmartPointer<F>,
+  backend: SmartPointer<B>,
 }
 
 pub trait AutomaticCall<'a, B: interfaces::Backend<'a>> {
@@ -112,8 +185,8 @@ where
   F: interfaces::Frontend<'a, B>,
   F: 'a,
 {
-  backend: Arc<Mutex<B>>,
-  frontend: Arc<Mutex<F>>,
+  backend: SmartPointer<B>,
+  frontend: SmartPointer<F>,
 
   #[allow(dead_code)]
   call: Caller<'a, B, F>,
@@ -127,24 +200,24 @@ where
   F: 'static,
 {
   pub fn build(self) -> Mer<'a, B, F> {
-    let backend = Arc::new(Mutex::new(self.backend.unwrap()));
-    let frontend = Arc::new(Mutex::new(self.frontend.unwrap()));
+    let backend = smart_pointer!(self.backend.unwrap());
+    let frontend = smart_pointer!(self.frontend.unwrap());
 
     
     // Fn(&crate::Call<Self::Intermediate>) -> Result<crate::Reply<Box<dyn erased_serde::Serialize>>, crate::Error>
-    let frontend_receiver = frontend.clone();
-    backend.lock().receiver(move |call: &Call<&B::Intermediate>| {
-      Ok(frontend_receiver.lock().receive(call).unwrap())
+    let frontend_receiver = clone!(frontend);
+    access_mut!(backend).unwrap().receiver(move |call: &Call<&B::Intermediate>| {
+      Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
     }).unwrap();
 
     Mer {
-      backend: backend.clone(),
-      frontend: frontend.clone(),
+      backend: clone!(backend),
+      frontend: clone!(frontend),
 
       call: Caller {
         frontend,
-        backend: backend.clone(),
-        call: Box::new(move |call: &Call<B::Intermediate>| backend.lock().call(call)),
+        backend: clone!(backend),
+        call: Box::new(move |call: &Call<B::Intermediate>| access_mut!(backend).unwrap().call(call)),
       },
     }
   }
@@ -163,14 +236,14 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
   }
 
   pub fn start(&mut self) -> Result<(), interfaces::backend::Error> {
-    self.backend.lock().start()
+    access_mut!(self.backend).unwrap().start()
   }
 
   pub fn stop(&mut self) -> Result<(), interfaces::backend::Error> {
-    self.backend.lock().stop()
+    access_mut!(self.backend).unwrap().stop()
   }
 
   pub fn receive(&self, call: &Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, interfaces::frontend::Error> {
-    self.frontend.lock().receive(call)
+    access_mut!(self.frontend).unwrap().receive(call)
   }
 }

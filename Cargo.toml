@@ -11,7 +11,8 @@ default = ["std", "backends", "frontends", "derive"]
 std = ["serde/std"
 #, "serde-transcode/std", "erased-serde/std"
 ]
-backends = ["std", "serde_json", "hyper", "hyper/full", "tokio", "tokio/full"]
+threadsafe = []
+backends = ["std", "serde_json", "hyper", "hyper/full", "tokio", "tokio/full", "threadsafe"]
 frontends = []
 derive = ["serde/derive"]
 

@@ -76,12 +76,8 @@ fn backend_receive() {
 
   mer.start().unwrap();
 
-  // let mut mer2 = Mer::new().with_backend(backends::Http::new(Some("http://127.0.0.1:8081".parse::<hyper::Uri>().unwrap()), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081)))).with_frontnd(frontends::Empty::new()).build();
-
-  // mer2.start().unwrap();
-
-  loop {
-    std::thread::sleep(std::time::Duration::from_millis(100));
-  }
+  // loop {
+  //   std::thread::sleep(std::time::Duration::from_millis(100));
+  // }
   println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
 }
