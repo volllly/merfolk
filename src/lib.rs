@@ -2,18 +2,7 @@
 
 extern crate alloc;
 
-#[cfg(not(feature = "threadsafe"))]
-use alloc::rc::Rc;
-use alloc::sync::Arc;
-#[cfg(not(feature = "threadsafe"))]
-use core::cell::RefCell;
-
 use core::marker::PhantomData;
-
-#[cfg(not(feature = "std"))]
-use spin::Mutex;
-#[cfg(feature = "std")]
-use std::sync::Mutex;
 
 #[cfg(test)]
 mod tests;
@@ -25,7 +14,11 @@ pub mod frontends;
 pub mod helpers;
 pub mod interfaces;
 
+
 use helpers::builder::*;
+
+#[macro_use]
+use helpers::smart_pointer::*;
 
 // #[derive(Debug, Snafu)]
 // pub enum Error<B, F> where B: snafu::Error, F: snafu::Error {
@@ -83,75 +76,6 @@ pub struct Reply<T> {
   pub payload: T,
 }
 unsafe impl<T> Send for Reply<T> where T: Send {}
-
-#[cfg(feature = "threadsafe")]
-struct SmartPointer<T>(Arc<Mutex<T>>);
-#[cfg(not(feature = "threadsafe"))]
-struct SmartPointer<T>(Rc<RefCell<T>>);
-unsafe impl<T> Send for SmartPointer<T> {}
-
-#[cfg(feature = "threadsafe")]
-macro_rules! smart_pointer {
-  ($x:expr) => {
-    SmartPointer(Arc::new(Mutex::new($x)))
-  };
-}
-
-#[cfg(not(feature = "threadsafe"))]
-macro_rules! smart_pointer {
-  ($x:expr) => {
-    SmartPointer(Rc::new(RefCell::new($x)))
-  };
-}
-
-#[cfg(feature = "threadsafe")]
-macro_rules! clone {
-  ($x:expr) => {
-    SmartPointer($x.0.clone())
-  };
-}
-
-#[cfg(all(feature = "threadsafe", feature = "std"))]
-macro_rules! access {
-  ($x:expr) => {
-    $x.0.lock()
-  };
-}
-
-#[cfg(all(feature = "threadsafe", not(feature = "std")))]
-macro_rules! access {
-  ($x:expr) => {
-    Ok(*$x.0.lock())
-  };
-}
-
-#[cfg(feature = "threadsafe")]
-macro_rules! access_mut {
-  ($x:expr) => {
-    access!($x)
-  };
-}
-
-#[cfg(not(feature = "threadsafe"))]
-macro_rules! clone {
-  ($x:expr) => {
-    SmartPointer($x.0.clone())
-  };
-}
-
-#[cfg(not(feature = "threadsafe"))]
-macro_rules! access {
-  ($x:expr) => {
-    $x.0.borrow()
-  };
-}
-
-#[cfg(not(feature = "threadsafe"))]
-macro_rules! access_mut {
-  ($x:expr) => {
-    $x.0.borrow_mut()
-  };
-}
 
 pub struct Caller<'a, B: interfaces::Backend<'a>> {
   #[allow(clippy::type_complexity)]
