@@ -15,15 +15,17 @@ impl<B: snafu::Error> From<B> for Error<B> {
 #[derive(Debug)]
 pub struct Derive {}
 
-impl Default for Derive {
+pub struct DeriveInit {}
+
+impl Default for DeriveInit {
   fn default() -> Self {
-    Derive {}
+    DeriveInit {}
   }
 }
 
-impl Derive {
-  pub fn new() -> Derive {
-    Derive::default()
+impl DeriveInit {
+  pub fn init(self) -> Derive {
+    Derive {}
   }
 }
 

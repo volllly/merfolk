@@ -41,21 +41,39 @@ pub struct Http {
   runtime: Runtime,
 }
 
-impl Default for Http {
+pub struct HttpInit {
+  pub client: Client<HttpConnector<GaiResolver>, Body>,
+  pub speak: Option<Uri>,
+  pub listen: Option<SocketAddr>,
+  pub runtime: Runtime,
+}
+
+impl Default for HttpInit {
   fn default() -> Self {
-    Http {
+    HttpInit {
       client: Client::new(),
       speak: None,
       listen: None,
-      receiver: None,
       runtime: Runtime::new().unwrap(),
     }
   }
 }
 
-impl Http {
-  pub fn new(speak: Option<Uri>, listen: Option<SocketAddr>) -> Http {
-    Http { speak, listen, ..Http::default() }
+impl From<HttpInit> for Http {
+  fn from(from: HttpInit) -> Self {
+    from.init()
+  }
+}
+
+impl HttpInit {
+  pub fn init(self) -> Http {
+    Http {
+      client: self.client,
+      speak: self.speak,
+      listen: self.listen,
+      receiver: None,
+      runtime: self.runtime,
+    }
   }
 }
 

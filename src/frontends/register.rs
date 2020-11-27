@@ -25,6 +25,22 @@ pub struct Register<'a, B: Backend<'a>> {
 
 unsafe impl<'a, T: Backend<'a>> Send for Register<'a, T> {}
 
+pub struct RegisterInit {}
+
+impl Default for RegisterInit {
+  fn default() -> Self {
+    RegisterInit {}
+  }
+}
+
+impl RegisterInit {
+  pub fn init<'a, B: Backend<'a>>(self) -> Register<'a, B> {
+    Register {
+      procedures: Arc::new(Mutex::new(HashMap::new())),
+    }
+  }
+}
+
 impl<'a, T: interfaces::Backend<'a>> Default for Register<'a, T> {
   fn default() -> Self {
     Register {
@@ -34,10 +50,6 @@ impl<'a, T: interfaces::Backend<'a>> Default for Register<'a, T> {
 }
 
 impl<'a, B: Backend<'a>> Register<'a, B> {
-  pub fn new() -> Register<'a, B> {
-    Register::default()
-  }
-
   pub fn register<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(&self, name: &str, procedure: P) -> Result<(), Error<B::Error>>
   where
     P: Fn(C) -> R + 'a,

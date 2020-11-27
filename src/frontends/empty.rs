@@ -16,15 +16,17 @@ impl<B: snafu::Error> From<B> for Error<B> {
 #[derive(Debug)]
 pub struct Empty {}
 
-impl Default for Empty {
+pub struct EmptyInit {}
+
+impl Default for EmptyInit {
   fn default() -> Self {
-    Empty {}
+    EmptyInit {}
   }
 }
 
-impl Empty {
-  pub fn new() -> Empty {
-    Empty::default()
+impl EmptyInit {
+  pub fn init(self) -> Empty {
+    Empty {}
   }
 }
 

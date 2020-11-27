@@ -12,15 +12,17 @@ pub struct InProcess {
   receiver: Option<Box<dyn Fn(&crate::Call<&String>) -> Result<crate::Reply<String>, Error> + Send>>,
 }
 
-impl Default for InProcess {
+pub struct InProcessInit {}
+
+impl Default for InProcessInit {
   fn default() -> Self {
-    InProcess { receiver: None }
+    InProcessInit {}
   }
 }
 
-impl InProcess {
-  pub fn new() -> InProcess {
-    InProcess::default()
+impl InProcessInit {
+  pub fn init(self) -> InProcess {
+    InProcess { receiver: None }
   }
 }
 

@@ -2,17 +2,24 @@ use super::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
-  Mer::new().with_backend(backends::Empty::new()).with_frontend(frontends::Empty::new()).build()
+  MerInit {
+    backend: backends::EmptyInit {}.init(),
+    frontend: frontends::EmptyInit {}.init(),
+  }
+  .init()
 }
 
 fn setup_http<'a>(port: u16) -> Mer<'a, backends::Http, frontends::Empty> {
-  Mer::new()
-    .with_backend(backends::Http::new(
-      Some(("http://localhost:".to_string() + &port.to_string()).parse::<hyper::Uri>().unwrap()),
-      Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port)),
-    ))
-    .with_frontend(frontends::Empty::new())
-    .build()
+  MerInit {
+    backend: backends::HttpInit {
+      speak: ("http://localhost:".to_string() + &port.to_string()).parse::<hyper::Uri>().unwrap().into(),
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port).into(),
+      ..Default::default()
+    }
+    .init(),
+    frontend: frontends::EmptyInit {}.init(),
+  }
+  .init()
 }
 
 #[test]
@@ -25,7 +32,7 @@ fn initializes() {
 #[cfg(feature = "backends")]
 fn empty_call() {
   use interfaces::Backend;
-  let mut empty = backends::Empty::new();
+  let mut empty = backends::EmptyInit {}.init();
 
   empty
     .call(&Call {
@@ -35,7 +42,6 @@ fn empty_call() {
     .unwrap();
 }
 
-#[allow(dead_code)]
 fn add(a: i32, b: i32) -> i32 {
   a + b
 }
@@ -62,10 +68,15 @@ fn frontend_call() {
 
 #[test]
 fn frontend_http() {
-  let mer = Mer::new()
-    .with_backend(backends::Http::new(Some("http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap()), None))
-    .with_frontend(frontends::Empty::new())
-    .build();
+  let mer = MerInit {
+    backend: backends::HttpInit {
+      speak: "http://volllly.free.beeceptor.com".parse::<hyper::Uri>().unwrap().into(),
+      ..Default::default()
+    }
+    .init(),
+    frontend: frontends::EmptyInit {}.init(),
+  }
+  .init();
 
   println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
 }
@@ -96,16 +107,19 @@ fn backend_receive() {
 
 #[test]
 fn register_http() {
-  let register = frontends::Register::new();
+  let register = frontends::RegisterInit {}.init();
   register.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let mut mer = Mer::new()
-    .with_backend(backends::Http::new(
-      Some("http://localhost:8084".parse::<hyper::Uri>().unwrap()),
-      Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084)),
-    ))
-    .with_frontend(register)
-    .build();
+  let mut mer = MerInit {
+    backend: backends::HttpInit {
+      speak: "http://localhost:8084".parse::<hyper::Uri>().unwrap().into(),
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084).into(),
+      ..Default::default()
+    }
+    .init(),
+    frontend: register,
+  }
+  .init();
 
   mer.start().unwrap();
 
@@ -115,10 +129,14 @@ fn register_http() {
 
 #[test]
 fn register_in_process() {
-  let register = frontends::Register::new();
+  let register = frontends::RegisterInit {}.init();
   register.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let mut mer = Mer::new().with_backend(backends::InProcess::new()).with_frontend(register).build();
+  let mut mer = MerInit {
+    backend: backends::InProcessInit {}.init(),
+    frontend: register,
+  }
+  .init();
 
   mer.start().unwrap();
 

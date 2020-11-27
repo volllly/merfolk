@@ -11,15 +11,17 @@ pub struct Empty {
   started: bool,
 }
 
-impl Default for Empty {
+pub struct EmptyInit {}
+
+impl Default for EmptyInit {
   fn default() -> Self {
-    Empty { started: false }
+    EmptyInit {}
   }
 }
 
-impl Empty {
-  pub fn new() -> Empty {
-    Empty::default()
+impl EmptyInit {
+  pub fn init(self) -> Empty {
+    Empty { started: false }
   }
 }
 
@@ -46,7 +48,6 @@ impl<'a> backend::Backend<'a> for Empty {
     Ok(())
   }
 
-  #[allow(unused_variables)]
   fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> {
     Ok(crate::Reply { payload: call.payload.clone() })
   }

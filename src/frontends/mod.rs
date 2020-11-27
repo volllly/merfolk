@@ -1,7 +1,7 @@
 pub mod empty;
-pub use empty::Empty;
+pub use empty::{Empty, EmptyInit};
 
 pub mod derive;
 
 pub mod register;
-pub use register::Register;
+pub use register::{Register, RegisterInit};

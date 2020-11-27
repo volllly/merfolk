@@ -1,8 +1,8 @@
 pub mod empty;
-pub use empty::Empty;
+pub use empty::{Empty, EmptyInit};
 
 pub mod http;
-pub use http::Http;
+pub use http::{Http, HttpInit};
 
 pub mod in_process;
-pub use in_process::InProcess;
+pub use in_process::{InProcess, InProcessInit};

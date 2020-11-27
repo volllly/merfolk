@@ -1,4 +1,3 @@
-
 #[cfg(not(feature = "threadsafe"))]
 use alloc::rc::Rc;
 #[cfg(feature = "threadsafe")]
@@ -11,8 +10,6 @@ use core::cell::RefCell;
 pub type SmatrtPointerMutex<T> = spin::Mutex<T>;
 #[cfg(all(feature = "std", feature = "threadsafe"))]
 pub type SmatrtPointerMutex<T> = std::sync::Mutex<T>;
-
-
 
 #[cfg(feature = "threadsafe")]
 pub struct SmartPointer<T>(pub Arc<SmatrtPointerMutex<T>>);
