@@ -36,10 +36,20 @@ where
 {
   type Intermediate = String;
   type Error = Error<B::Error>;
+  type Call = ();
 
   fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Self::Error> {
     let (a, b) = B::deserialize::<(i32, i32)>(call.payload)?;
     let r = a + b;
     Ok(crate::Reply { payload: B::serialize(&r)? })
+  }
+
+  #[allow(unused_variables)]
+  fn caller<T>(&mut self, caller: T) -> Result<alloc::rc::Rc<Self::Call>, Self::Error>
+  where
+    T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send,
+    T: 'static,
+  {
+    Ok(alloc::rc::Rc::new(()))
   }
 }

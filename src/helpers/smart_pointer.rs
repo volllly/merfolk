@@ -19,7 +19,6 @@ pub struct SmartPointer<T>(pub Rc<RefCell<T>>);
 unsafe impl<T> Send for SmartPointer<T> {}
 
 #[cfg(feature = "threadsafe")]
-#[macro_export]
 macro_rules! smart_pointer {
   ($x:expr) => {
     SmartPointer(alloc::sync::Arc::new(SmatrtPointerMutex::new($x)))
@@ -27,14 +26,12 @@ macro_rules! smart_pointer {
 }
 
 #[cfg(not(feature = "threadsafe"))]
-#[macro_export]
 macro_rules! smart_pointer {
   ($x:expr) => {
     SmartPointer(Rc::new(RefCell::new($x)))
   };
 }
 
-#[macro_export]
 macro_rules! clone {
   ($x:expr) => {
     SmartPointer($x.0.clone())
@@ -42,7 +39,6 @@ macro_rules! clone {
 }
 
 #[cfg(all(feature = "threadsafe", feature = "std"))]
-#[macro_export]
 macro_rules! access {
   ($x:expr) => {
     $x.0.lock()
@@ -50,7 +46,6 @@ macro_rules! access {
 }
 
 #[cfg(all(feature = "threadsafe", not(feature = "std")))]
-#[macro_export]
 macro_rules! access {
   ($x:expr) => {
     Ok(*$x.0.lock())
@@ -58,7 +53,6 @@ macro_rules! access {
 }
 
 #[cfg(feature = "threadsafe")]
-#[macro_export]
 macro_rules! access_mut {
   ($x:expr) => {
     access!($x)
@@ -66,7 +60,6 @@ macro_rules! access_mut {
 }
 
 #[cfg(not(feature = "threadsafe"))]
-#[macro_export]
 macro_rules! access {
   ($x:expr) => {
     $x.0.borrow()
@@ -74,7 +67,6 @@ macro_rules! access {
 }
 
 #[cfg(not(feature = "threadsafe"))]
-#[macro_export]
 macro_rules! access_mut {
   ($x:expr) => {
     $x.0.borrow_mut()

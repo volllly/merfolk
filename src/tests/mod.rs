@@ -46,16 +46,15 @@ fn add(a: i32, b: i32) -> i32 {
   a + b
 }
 
-impl<'a, B: interfaces::Backend<'a>> Caller<'a, B> {
+impl<'a, B: interfaces::Backend<'a>> frontends::register::Call<'a, B> {
   fn add(&self, a: i32, b: i32) -> Result<i32, B::Error> {
-    Ok(
-      self
-        .call(&Call {
-          procedure: "add".to_string(),
-          payload: &B::serialize(&(a, b)).unwrap(),
-        })?
-        .payload,
-    )
+    Ok(B::deserialize(
+      &(self.call)(&Call {
+        procedure: "add".to_string(),
+        payload: &B::serialize(&(a, b)).unwrap(),
+      })?
+      .payload,
+    )?)
   }
 }
 
@@ -63,7 +62,7 @@ impl<'a, B: interfaces::Backend<'a>> Caller<'a, B> {
 fn frontend_call() {
   let mer = setup_empty();
 
-  assert_eq!(mer.call.add(1, 2).is_ok(), false);
+  mer.call();
 }
 
 #[test]
@@ -78,19 +77,7 @@ fn frontend_http() {
   }
   .init();
 
-  println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
-}
-
-#[test]
-fn frontend_receive() {
-  let mer = setup_empty();
-
-  mer
-    .receive(&Call {
-      procedure: "add".to_string(),
-      payload: &serde_json::to_string(&(1i32, 2i32)).unwrap(),
-    })
-    .unwrap();
+  println!("1 + 2 = {:?}", mer.call());
 }
 
 #[test]
@@ -102,7 +89,7 @@ fn backend_receive() {
   // loop {
   //   std::thread::sleep(std::time::Duration::from_millis(100));
   // }
-  println!("1 + 2 = {}", mer.call.add(1, 2).unwrap());
+  println!("1 + 2 = {:?}", mer.call());
 }
 
 #[test]
@@ -124,7 +111,7 @@ fn register_http() {
   mer.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  assert_eq!(mer.call.add(a, b).unwrap(), a + b);
+  assert_eq!(mer.call().add(a, b).unwrap(), a + b);
 }
 
 #[test]
@@ -141,5 +128,5 @@ fn register_in_process() {
   mer.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  assert_eq!(mer.call.add(a, b).unwrap(), a + b);
+  assert_eq!(mer.call().add(a, b).unwrap(), a + b);
 }
