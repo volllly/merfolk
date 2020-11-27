@@ -23,11 +23,11 @@ pub enum Error {
   RequestBuilder { source: hyper::http::Error },
   ParseResponseBodyBytes { source: hyper::Error },
   ParseResponseBody { source: std::string::FromUtf8Error },
-  ClientRequest { source: hyper::error::Error },
+  ClientRequest { source: hyper::Error },
   FailedRequest { status: StatusCode },
   NoListen,
   NoReceiver,
-  BindServer { source: hyper::error::Error },
+  BindServer { source: hyper::Error },
   NoProcedureHeader { source: hyper::http::Error },
   GetCallLockInReceiver,
 }
