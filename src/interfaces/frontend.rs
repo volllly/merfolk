@@ -1,5 +1,4 @@
 use crate::interfaces::backend;
-use alloc::rc::Rc;
 
 pub trait Frontend<'a, B>: Send
 where
@@ -7,9 +6,9 @@ where
 {
   type Intermediate: serde::Serialize + serde::Deserialize<'a>;
   type Error: snafu::Error + core::fmt::Debug;
-  type Call;
+  type Call: Clone;
 
-  fn caller<T>(&mut self, caller: T) -> Result<Rc<Self::Call>, Self::Error>
+  fn caller<T>(&mut self, caller: T) -> Result<Self::Call, Self::Error>
   where
     T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send,
     T: 'static;

@@ -71,9 +71,9 @@ where
 {
   type Intermediate = String;
   type Error = Error<B::Error>;
-  type Call = Call<'a, B>;
+  type Call = Rc<Call<'a, B>>;
 
-  fn caller<T>(&mut self, caller: T) -> Result<Rc<Self::Call>, Self::Error>
+  fn caller<T>(&mut self, caller: T) -> Result<Self::Call, Self::Error>
   where
     T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send,
     T: 'static,

@@ -15,7 +15,6 @@ pub mod frontends;
 
 pub mod interfaces;
 
-use alloc::rc::Rc;
 use core::marker::PhantomData;
 
 use helpers::smart_pointer::*;
@@ -50,7 +49,7 @@ where
 
   backend: SmartPointer<B>,
   // frontend: SmartPointer<F>,
-  call: Option<Rc<F::Call>>,
+  call: Option<F::Call>,
 }
 
 pub struct MerInit<B, F> {
@@ -101,7 +100,7 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
     access_mut!(self.backend).unwrap().stop()
   }
 
-  pub fn call(&self) -> Rc<F::Call> {
-    Rc::clone(self.call.as_ref().unwrap())
+  pub fn call(&self) -> F::Call {
+    self.call.as_ref().unwrap().clone()
   }
 }

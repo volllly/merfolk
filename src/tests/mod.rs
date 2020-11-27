@@ -130,3 +130,26 @@ fn register_in_process() {
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   assert_eq!(mer.call().add(a, b).unwrap(), a + b);
 }
+
+#[test]
+fn derive_http() {
+  let mut mer = MerInit {
+    backend: backends::HttpInit {
+      speak: "http://localhost:8084".parse::<hyper::Uri>().unwrap().into(),
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084).into(),
+      ..Default::default()
+    }
+    .init(),
+    frontend: frontends::DeriveInit {
+      _phantom: PhantomData,
+      receiver: frontends::derive::Receive { offset: 2 },
+    }
+    .init::<frontends::derive::Call<backends::Http>>(),
+  }
+  .init();
+
+  mer.start().unwrap();
+
+  let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
+  assert_eq!(mer.call().add(a, b).unwrap(), a + b);
+}
