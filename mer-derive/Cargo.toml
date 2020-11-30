@@ -1,0 +1,23 @@
+[package]
+name = "mer_derive"
+version = "0.1.0"
+authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
+edition = "2018"
+
+[features]
+
+default = ["std"]
+
+std = []
+
+[dependencies]
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+
+[lib]
+proc-macro = true
+
+[[test]]
+name = "test"
+path = "test/tests.rs"

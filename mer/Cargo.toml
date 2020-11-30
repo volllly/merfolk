@@ -1,0 +1,32 @@
+[package]
+name = "mer"
+version = "0.1.0"
+authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
+edition = "2018"
+
+[features]
+
+default = ["std", "backends", "frontends", "derive", "snafu/std"]
+
+std = ["serde/std"
+#, "serde-transcode/std", "erased-serde/std"
+]
+threadsafe = ["spin"]
+backends = ["std", "serde_json", "hyper", "hyper/full", "tokio", "tokio/full", "threadsafe"]
+frontends = ["std", "mer_derive"]
+derive = ["serde/derive"]
+
+[dependencies]
+serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
+# serde-transcode = { version = "1.2.0", git = "https://github.com/volllly/serde-transcode", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.57", optional = true }
+# erased-serde = { version = "0.3.12", default-features = false, features = ["alloc"] }
+hyper = { git = "https://github.com/hyperium/hyper", optional = true }
+tokio = { version = "0.3", optional = true }
+spin = { version = "0.7.0", optional = true }
+snafu = { version = "0.6.9", default-features = false }
+core-error = "0.0.0"
+mer_derive = { path = "../mer-derive", optional = true }
+
+[dev-dependencies]
+rand = "0.7.3"
