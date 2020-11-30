@@ -30,3 +30,7 @@ mer_derive = { path = "../mer-derive", optional = true }
 
 [dev-dependencies]
 rand = "0.7.3"
+
+[[test]]
+name = "test"
+path = "test/tests.rs"

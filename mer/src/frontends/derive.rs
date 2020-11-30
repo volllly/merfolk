@@ -21,7 +21,7 @@ impl<B: snafu::Error> From<B> for Error<B> {
 }
 
 #[allow(clippy::type_complexity)]
-pub struct Derive<'a, B: Backend<'a>, C: Caller<'a, B>, R: Receiver<'a, B>> {
+pub struct Derive<'a, B: Backend<'a>, C: Caller<'a>, R: Receiver<'a, B>> {
   #[allow(clippy::type_complexity)]
   _phantom: PhantomData<C>,
 
@@ -29,7 +29,7 @@ pub struct Derive<'a, B: Backend<'a>, C: Caller<'a, B>, R: Receiver<'a, B>> {
   caller: Option<Rc<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a>>,
 }
 
-unsafe impl<'a, B: Backend<'a>, C: Caller<'a, B>, R: Receiver<'a, B>> Send for Derive<'a, B, C, R> {}
+unsafe impl<'a, B: Backend<'a>, C: Caller<'a>, R: Receiver<'a, B>> Send for Derive<'a, B, C, R> {}
 
 pub struct DeriveInit<'a, B: Backend<'a>, R: Receiver<'a, B>> {
   pub _phantom: PhantomData<&'a B>,
@@ -38,7 +38,7 @@ pub struct DeriveInit<'a, B: Backend<'a>, R: Receiver<'a, B>> {
 }
 
 impl<'a, B: Backend<'a>, R: Receiver<'a, B>> DeriveInit<'a, B, R> {
-  pub fn init<C: Caller<'a, B>>(self) -> Derive<'a, B, C, R> {
+  pub fn init<C: Caller<'a>>(self) -> Derive<'a, B, C, R> {
     Derive {
       _phantom: PhantomData,
 
@@ -48,7 +48,7 @@ impl<'a, B: Backend<'a>, R: Receiver<'a, B>> DeriveInit<'a, B, R> {
   }
 }
 
-impl<'a, B, C: Caller<'a, B>, R: Receiver<'a, B>> interfaces::Frontend<'a, B> for Derive<'a, B, C, R>
+impl<'a, B, C: Caller<'a, B = B>, R: Receiver<'a, B>> interfaces::Frontend<'a, B> for Derive<'a, B, C, R>
 where
   B: interfaces::Backend<'a>,
 {
@@ -71,55 +71,19 @@ where
   }
 }
 
-pub trait Caller<'a, B: interfaces::Backend<'a>>: Clone {
+pub trait Caller<'a>: Clone {
+  type B: Backend<'a>;
+
   fn new<T>(caller: T) -> Self
   where
-    T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'static + Send;
+    T: Fn(&crate::Call<&<Self::B as interfaces::Backend<'a>>::Intermediate>) -> Result<crate::Reply<<Self::B as interfaces::Backend<'a>>::Intermediate>, <Self::B as interfaces::Backend<'a>>::Error> + 'static + Send;
 
   #[allow(clippy::type_complexity)]
-  fn get(&self) -> Rc<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a>;
+  fn get(&self) -> Rc<dyn Fn(&crate::Call<&<Self::B as interfaces::Backend<'a>>::Intermediate>) -> Result<crate::Reply<<Self::B as interfaces::Backend<'a>>::Intermediate>, <Self::B as interfaces::Backend<'a>>::Error> + 'a>;
 }
 
 pub trait Receiver<'a, B: interfaces::Backend<'a>> {
   fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>>;
-}
-
-// derive.register("add", |(a, b)| add(a, b)).unwrap();
-pub struct Receive {
-  pub offset: i32,
-}
-
-pub trait Frontend {
-  fn add(a: i32, b: i32) -> i32;
-  fn add_with_offset(&self, a: i32, b: i32) -> i32;
-}
-
-impl Frontend for Receive {
-  fn add(a: i32, b: i32) -> i32 {
-    a + b
-  }
-
-  fn add_with_offset(&self, a: i32, b: i32) -> i32 {
-    a + b + self.offset
-  }
-}
-
-impl<'a, B: interfaces::Backend<'a>> Receiver<'a, B> for Receive {
-  fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> {
-    match call.procedure.as_str() {
-      "add" => {
-        let payload = B::deserialize::<(i32, i32)>(call.payload)?;
-        let reply = B::serialize(&Self::add(payload.0, payload.1))?;
-        Ok(crate::Reply { payload: reply })
-      }
-      "add_with_offset" => {
-        let payload = B::deserialize::<(i32, i32)>(call.payload)?;
-        let reply = B::serialize(&self.add_with_offset(payload.0, payload.1))?;
-        Ok(crate::Reply { payload: reply })
-      }
-      _ => Err(Error::UnknownProcedure {}),
-    }
-  }
 }
 
 pub struct Call<'a, B: interfaces::Backend<'a>> {
@@ -133,7 +97,9 @@ impl<'a, B: interfaces::Backend<'a>> Clone for Call<'a, B> {
   }
 }
 
-impl<'a, B: interfaces::Backend<'a>> Caller<'a, B> for Call<'a, B> {
+impl<'a, B: interfaces::Backend<'a>> Caller<'a> for Call<'a, B> {
+  type B = B;
+
   fn new<T>(caller: T) -> Self
   where
     T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'static + Send,
