@@ -22,6 +22,8 @@ impl<B: snafu::Error> From<B> for Error<B> {
 pub struct Register<'a, B: Backend<'a>> {
   #[allow(clippy::type_complexity)]
   procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> + 'a>>>>,
+
+  call: Option<Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send>>
 }
 
 unsafe impl<'a, T: Backend<'a>> Send for Register<'a, T> {}
@@ -38,6 +40,8 @@ impl RegisterInit {
   pub fn init<'a, B: Backend<'a>>(self) -> Register<'a, B> {
     Register {
       procedures: Arc::new(Mutex::new(HashMap::new())),
+
+      call: None
     }
   }
 }
@@ -58,15 +62,10 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
   }
 
   pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R, Error<B::Error>> {
-    match self.procedures.lock().unwrap().get(procedure) {
-      Some(registered) => {
-        Ok(B::deserialize(&registered(&crate::Call {
-          procedure: procedure.to_string(),
-          payload: &B::serialize(&payload)?
-        })?.payload)?)
-      }
-      None => Err(Error::ProcedureNotRegistered {})
-    }
+    Ok(B::deserialize(&self.call.as_ref().unwrap()(&crate::Call {
+      procedure: procedure.to_string(),
+      payload: &B::serialize(&payload)?
+    })?.payload)?)
   }
 }
 
@@ -76,6 +75,15 @@ where
 {
   type Intermediate = String;
   type Error = Error<B::Error>;
+
+  fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
+  where
+    T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send,
+    T: 'static,
+  {
+    self.call = Some(Box::new(caller));
+    Ok(())
+  }
 
   fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> {
     self.procedures.lock().unwrap().get(&call.procedure).unwrap()(call)

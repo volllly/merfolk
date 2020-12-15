@@ -72,6 +72,13 @@ where
       .receiver(move |call: &Call<&B::Intermediate>| Ok(access!(frontend_receiver).unwrap().receive(call).unwrap()))
       .unwrap();
 
+    access_mut!(frontend)
+      .unwrap()
+      .caller(move |call: &Call<&B::Intermediate>| {
+        access_mut!(backend_caller).unwrap().call(call)
+      })
+      .unwrap();
+
     Mer {
       _phantom: PhantomData,
 

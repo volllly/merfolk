@@ -1,19 +1,10 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, ItemTrait, AttributeArgs};
+use syn::{parse_macro_input, ItemTrait, ItemStruct, AttributeArgs};
 use darling::FromMeta;
 
 #[macro_use]
-mod receiver;
-
-#[proc_macro_derive(Receiver)]
-pub fn derive_receiver(input: TokenStream) -> TokenStream {
-  let input = parse_macro_input!(input as DeriveInput);
-
-  receiver::expand_struct(&input)
-  .unwrap_or_else(to_compile_errors)
-  .into()
-}
+mod frontend;
 
 fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {
   let compile_errors = errors.iter().map(syn::Error::to_compile_error);
@@ -21,16 +12,25 @@ fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn frontend(args: TokenStream, input: TokenStream) -> TokenStream {
   let args = parse_macro_input!(args as AttributeArgs);
-  let input = parse_macro_input!(input as ItemTrait);
 
-  let args_parsed = match receiver::AttrArgs::from_list(&args) {
+  let args_parsed = match frontend::AttrArgs::from_list(&args) {
     Ok(v) => v,
     Err(e) => { return TokenStream::from(e.write_errors()); }
   };
 
-  receiver::expand_trait(&args_parsed, &input)
-  .unwrap_or_else(to_compile_errors)
-  .into()
+  if args_parsed.target.is_some() {
+    let input = parse_macro_input!(input as ItemTrait);
+
+    frontend::expand_trait(&args_parsed, &input)
+    .unwrap_or_else(to_compile_errors)
+    .into()
+  } else {
+    let input = parse_macro_input!(input as ItemStruct);
+
+    frontend::expand_struct(&args_parsed, &input)
+    .unwrap_or_else(to_compile_errors)
+    .into()
+  }
 }

@@ -2,32 +2,19 @@ use mer_derive::*;
 
 #[test]
 fn test() {
-  struct Data<T> {
+  #[frontend]
+  struct Data<T> where T: std::ops::Add<Output = T> + for<'de> serde::Deserialize<'de> + serde::Serialize + Copy + Send {
     pub offset: T
   }
 
-  #[receiver(data = "Data")]
-  trait Receiver<T> where T: std::ops::Add<Output = T> + for<'de> serde::Deserialize<'de> + serde::Serialize + Copy {
+
+  #[frontend(target = "Data")]
+  trait Service<T> where T: std::ops::Add<Output = T> + for<'de> serde::Deserialize<'de> + serde::Serialize + Copy + Send {
     fn add(a: T, b: T) -> T::Output {
       a + b
     }
   
     fn add_with_offset(&self, a: T, b: T) -> T::Output {
-      a + b + self.offset
-    }
-  }
-
-  struct Data2 {
-    pub offset: i32
-  }
-
-  #[receiver(data = "Data2")]
-  trait Receiver2 {
-    fn add(a: i32, b: i32) -> i32 {
-      a + b
-    }
-  
-    fn add_with_offset(&self, a: i32, b: i32) -> i32 {
       a + b + self.offset
     }
   }
