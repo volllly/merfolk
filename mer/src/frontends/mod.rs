@@ -5,4 +5,4 @@ pub mod register;
 pub use register::{Register, RegisterInit};
 
 pub mod derive;
-pub use derive::{Derive, DeriveInit};
+pub use derive::{DeriveFrontend};

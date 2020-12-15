@@ -1,6 +1,5 @@
 use mer::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::marker::PhantomData;
 
 fn setup_empty<'a>() -> Mer<'a, backends::Empty, frontends::Empty> {
   MerInit {
@@ -112,7 +111,8 @@ fn register_http() {
   mer.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  // assert_eq!(mer.call().add(a, b).unwrap(), a + b);
+  let tmp = mer.call();
+  assert_eq!(mer.frontend(|f| f.call("add", (a, b))), a + b);
 }
 
 #[test]
@@ -129,17 +129,18 @@ fn register_in_process() {
   mer.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  // assert_eq!(mer.call().add(a, b).unwrap(), a + b);
+  assert_eq!(mer.frontend(|f| f.call("add", (a, b))), a + b);
 }
 
 #[test]
 fn derive_http() {
-  struct Data<T> {
+  #[mer_derive::frontend()]
+  struct Data<T> where T: std::ops::Add<Output = T> + for<'de> serde::Deserialize<'de> + serde::Serialize + Copy + Send {
     pub offset: T
   }
   
-  #[mer_derive::receiver(data = "Data")]
-  trait Receiver<T> where T: std::ops::Add<Output = T> + for<'de> serde::Deserialize<'de> + serde::Serialize + Copy {
+  #[mer_derive::frontend(target = "Data")]
+  trait Receiver<T> where T: std::ops::Add<Output = T> + for<'de> serde::Deserialize<'de> + serde::Serialize + Copy + Send {
     fn add(a: T, b: T) -> T::Output {
       a + b
     }
@@ -156,16 +157,12 @@ fn derive_http() {
       ..Default::default()
     }
     .init(),
-    frontend: frontends::DeriveInit {
-      _phantom: PhantomData,
-      receiver: Data { offset: 2 },
-    }
-    .init::<frontends::derive::Call<backends::Http>>(),
+    frontend: DataInit::<i32> { offset: 32 }.init()
   }
   .init();
 
   mer.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  assert_eq!(mer.call().add(a, b).unwrap(), a + b);
+  assert_eq!(mer.call().add_with_offset(a, b).unwrap(), a + b);
 }

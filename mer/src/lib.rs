@@ -5,9 +5,6 @@ extern crate alloc;
 #[macro_use]
 pub mod helpers;
 
-#[cfg(test)]
-mod tests;
-
 #[cfg(feature = "backends")]
 pub mod backends;
 #[cfg(feature = "frontends")]
@@ -19,13 +16,12 @@ use core::marker::PhantomData;
 
 use helpers::smart_pointer::*;
 
-// #[derive(Debug, Snafu)]
-// pub enum Error<B, F> where B: snafu::Error, F: snafu::Error {
-//   MakeCall { source: B },
-//   ReceiveCall { source: F },
-//   Start { source: B },
-//   Stop { source: B },
-// }
+use snafu::Snafu;
+
+#[derive(Debug, Snafu)]
+pub enum Error {
+  Lock {}
+}
 
 pub struct Call<T> {
   pub procedure: String,
@@ -48,8 +44,8 @@ where
   _phantom: PhantomData<&'a B>,
 
   backend: SmartPointer<B>,
-  // frontend: SmartPointer<F>,
-  call: Option<F::Call>,
+  frontend: SmartPointer<F>,
+  // call: Option<F::Call>,
 }
 
 pub struct MerInit<B, F> {
@@ -76,17 +72,11 @@ where
       .receiver(move |call: &Call<&B::Intermediate>| Ok(access!(frontend_receiver).unwrap().receive(call).unwrap()))
       .unwrap();
 
-    let call = access_mut!(frontend)
-      .unwrap()
-      .caller(move |call: &Call<&B::Intermediate>| access_mut!(backend_caller).unwrap().call(call))
-      .unwrap();
-
     Mer {
       _phantom: PhantomData,
 
       backend: clone!(backend),
-      // frontend: clone!(frontend),
-      call: Some(call),
+      frontend: clone!(frontend),
     }
   }
 }
@@ -100,7 +90,25 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
     access_mut!(self.backend).unwrap().stop()
   }
 
-  pub fn call(&self) -> F::Call {
-    self.call.as_ref().unwrap().clone()
+  pub fn frontend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&F) -> R {
+    Ok(access(&*match access!(self.frontend) {
+      Ok(frontend) => frontend,
+      Err(_) => return Err(Error::Lock {})
+    }))
+  }
+
+  pub fn backend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&B) -> R {
+    Ok(access(&*match access!(self.backend) {
+      Ok(backend) => backend,
+      Err(_) => return Err(Error::Lock {})
+    }))
+  }
+
+  pub fn frontend_clone(&self) -> SmartPointer<F> {
+    clone!(self.frontend)
+  }
+
+  pub fn backend_clone(&self) -> SmartPointer<F> {
+    clone!(self.frontend)
   }
 }
