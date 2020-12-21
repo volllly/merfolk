@@ -28,7 +28,7 @@ snafu = { version = "0.6.9", default-features = false }
 mer_derive = { path = "../mer-derive", optional = true }
 
 [dev-dependencies]
-rand = "0.7.3"
+rand = "0.8.0"
 
 [[test]]
 name = "test"
