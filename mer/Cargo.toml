@@ -22,7 +22,7 @@ serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0.57", optional = true }
 # erased-serde = { version = "0.3.12", default-features = false, features = ["alloc"] }
 hyper = { git = "https://github.com/hyperium/hyper", optional = true }
-tokio = { version = "0.3", optional = true }
+tokio = { version = "1.0", optional = true }
 spin = { version = "0.7.0", optional = true }
 snafu = { version = "0.6.9", default-features = false }
 mer_derive = { path = "../mer-derive", optional = true }
