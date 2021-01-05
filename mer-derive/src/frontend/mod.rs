@@ -33,7 +33,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
   impl_generics.params.insert(0, syn::parse_quote!{ '__a });
 
   let receiver_impl_items: Vec<TokenStream> = item_methods.iter().map(|i| {
-    let item_name = &i.sig.ident;
+    let item_name = format_ident!("{}", &i.sig.ident);
     let mut has_self: bool = false;
     let arguments: Vec<&Box<syn::Type>> = i.sig.inputs.iter().filter_map(|a| {
       match a {
@@ -66,6 +66,8 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
 
     quote! {
       stringify!(#item_name) => {
+        log::debug!("frontend procedure receiving: {}", stringify!(#item_name));
+
         #deser
         #reply
         #ser
@@ -99,6 +101,8 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
 
     quote! {
       pub fn #item_name(#signature) #return_type {
+        log::debug!("frontend procedure calling: {}", stringify!(#item_name));
+
         let ser_payload = __B::serialize(&(#( #arguments ),*))?;
 
         let reply = self.__call.as_ref().unwrap()(&mer::Call {
@@ -122,15 +126,14 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
       #( #items )*
     }
 
-    // impl #impl_generic_def mer::frontends::derive::Receiver<'__a, __B>
-    //   for #service_name #impl_generics #where_clause {
-    //     fn receive(&self, call: &mer::Call<&__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, mer::frontends::derive::Error<__B::Error>> {
-    //       match call.procedure.as_str() {
-    //         #( #receiver_impl_items ),*
-    //         _ => Err(mer::frontends::derive::Error::UnknownProcedure {}),
-    //       }
-    //     }
-    // }
+    impl #impl_generic_def #service_name #impl_generics #where_clause {
+        fn __receive(&self, call: &mer::Call<&__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, mer::frontends::derive::Error<__B::Error>> {
+          match call.procedure.as_str() {
+            #( #receiver_impl_items ),*
+            _ => Err(mer::frontends::derive::Error::UnknownProcedure {}),
+          }
+        }
+    }
 
 
     impl #impl_generic_def #service_name #impl_generics #where_clause {
@@ -205,7 +208,9 @@ pub fn expand_struct(args: &AttrArgs, input: &syn::ItemStruct) -> Result<TokenSt
       }
 
       fn receive(&self, call: &mer::Call<&__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, mer::frontends::derive::Error<__B::Error>> {
-        self.__call.as_ref().unwrap()(call).map_err(core::convert::Into::into)
+        log::debug!("receiving: Call {{ prodecure: {:?}, payload: ... }}", &call.procedure);
+
+        self.__receive(call).map_err(core::convert::Into::into)
       }
     }
   })

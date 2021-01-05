@@ -16,6 +16,8 @@ use core::marker::PhantomData;
 
 use snafu::Snafu;
 
+use log::{trace, debug};
+
 #[derive(Debug, Snafu)]
 pub enum Error {
   Lock {}
@@ -43,7 +45,6 @@ where
 
   backend: smart_lock_type!(B),
   frontend: smart_lock_type!(F),
-  // call: Option<F::Call>,
 }
 
 pub struct MerInit<B, F> {
@@ -53,10 +54,12 @@ pub struct MerInit<B, F> {
 
 impl<'a, B, F> MerInit<B, F>
 where
-  B: interfaces::Backend<'a>,
-  F: interfaces::Frontend<'a, B>,
+  B: interfaces::Backend<'a> + 'static,
+  F: interfaces::Frontend<'a, B> + 'static,
 {
   pub fn init(self) -> Mer<'a, B, F> {
+    trace!("MerInit.init()");
+
     let backend = smart_lock!(self.backend);
     let frontend = smart_lock!(self.frontend);
 
@@ -65,16 +68,20 @@ where
 
     access_mut!(backend)
       .unwrap()
-      .receiver(smart_pointer!(move |call: &Call<&B::Intermediate>| {
+      .receiver(move |call: &Call<&B::Intermediate>| {
+        trace!("Mer.backend.receiver()");
+        
         Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
-      })) //TODO: fix error
+      }) //TODO: fix error
       .unwrap();
 
     access_mut!(frontend)
       .unwrap()
-      .caller(smart_pointer!(move |call: &Call<&B::Intermediate>| {
+      .caller(move |call: &Call<&B::Intermediate>| {
+        trace!("Mer.frontend.caller()");
+
         access!(backend_caller).unwrap().call(call)
-      }))
+      })
       .unwrap();
 
     Mer {
@@ -88,14 +95,17 @@ where
 
 impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, F> {
   pub fn start(&mut self) -> Result<(), B::Error> {
+    trace!("MerInit.start()");
     access!(self.backend).unwrap().start()
   }
 
   pub fn stop(&mut self) -> Result<(), B::Error> {
+    trace!("MerInit.stop()");
     access!(self.backend).unwrap().stop()
   }
 
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&F) -> R {
+    trace!("MerInit.frontend()");
     Ok(access(&*match access!(self.frontend) {
       Ok(frontend) => frontend,
       Err(_) => return Err(Error::Lock {})
@@ -103,17 +113,10 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
   }
 
   pub fn backend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&B) -> R {
+    trace!("MerInit.backend()");
     Ok(access(&*match access!(self.backend) {
       Ok(backend) => backend,
       Err(_) => return Err(Error::Lock {})
     }))
-  }
-
-  pub fn frontend_clone(&self) -> smart_lock_type!(F) {
-    clone_lock!(self.frontend)
-  }
-
-  pub fn backend_clone(&self) -> smart_lock_type!(F) {
-    clone_lock!(self.frontend)
   }
 }

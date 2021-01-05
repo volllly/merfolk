@@ -23,7 +23,7 @@ pub struct Register<'a, B: Backend<'a>> {
   #[allow(clippy::type_complexity)]
   procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> + 'a>>>>,
 
-  call: Option<smart_pointer_type!(dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send)>
+  call: Option<Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send>>
 }
 
 unsafe impl<'a, T: Backend<'a>> Send for Register<'a, T> {}
@@ -76,11 +76,11 @@ where
   type Intermediate = String;
   type Error = Error<B::Error>;
 
-  fn caller<T>(&mut self, caller: smart_pointer_type!(T)) -> Result<(), Self::Error>
+  fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
   where
     T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send
   {
-    self.call = Some(caller);
+    self.call = Some(Box::new(caller));
     Ok(())
   }
 

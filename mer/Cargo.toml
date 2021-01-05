@@ -25,10 +25,12 @@ hyper = { version = "0.14", optional = true }
 tokio = { version = "1.0", optional = true }
 spin = { version = "0.7.0", optional = true }
 snafu = { version = "0.6.9", default-features = false }
+log = { version = "0.4", default-features = false }
 mer_derive = { path = "../mer-derive", optional = true }
 
 [dev-dependencies]
 rand = "0.8"
+flexi_logger = "0.16"
 
 [[test]]
 name = "test"
