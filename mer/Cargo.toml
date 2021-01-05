@@ -21,14 +21,14 @@ serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
 # serde-transcode = { version = "1.2.0", git = "https://github.com/volllly/serde-transcode", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0.57", optional = true }
 # erased-serde = { version = "0.3.12", default-features = false, features = ["alloc"] }
-hyper = { git = "https://github.com/hyperium/hyper", optional = true }
-tokio = { version = "0.3", optional = true }
+hyper = { version = "0.14", optional = true }
+tokio = { version = "1.0", optional = true }
 spin = { version = "0.7.0", optional = true }
 snafu = { version = "0.6.9", default-features = false }
 mer_derive = { path = "../mer-derive", optional = true }
 
 [dev-dependencies]
-rand = "0.7.3"
+rand = "0.8"
 
 [[test]]
 name = "test"

@@ -14,7 +14,7 @@ std = []
 syn = "1.0"
 quote = "1.0"
 proc-macro2 = "1.0"
-darling = "0.10"
+darling = "0.11"
 
 [dev-dependencies]
 mer = { path = "../mer" }

@@ -38,12 +38,11 @@ impl<'a> interfaces::Backend<'a> for InProcess {
     Ok(())
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
+  fn receiver<T>(&mut self, receiver: smart_pointer_type!(T)) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send,
-    T: 'static,
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send + 'static
   {
-    self.receiver = Some(Box::new(receiver));
+    self.receiver = Some(Box::new(*receiver));
 
     Ok(())
   }

@@ -5,10 +5,9 @@ pub trait Backend<'a>: Send {
   fn start(&mut self) -> Result<(), Self::Error>;
   fn stop(&mut self) -> Result<(), Self::Error>;
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
+  fn receiver<T>(&mut self, receiver: smart_pointer_type!(T)) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send,
-    T: 'static;
+    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send + 'static;
 
   fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error>;
 

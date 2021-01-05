@@ -14,8 +14,6 @@ pub mod interfaces;
 
 use core::marker::PhantomData;
 
-use helpers::smart_pointer::*;
-
 use snafu::Snafu;
 
 #[derive(Debug, Snafu)]
@@ -43,8 +41,8 @@ where
 {
   _phantom: PhantomData<&'a B>,
 
-  backend: SmartPointer<B>,
-  frontend: SmartPointer<F>,
+  backend: smart_lock_type!(B),
+  frontend: smart_lock_type!(F),
   // call: Option<F::Call>,
 }
 
@@ -56,45 +54,45 @@ pub struct MerInit<B, F> {
 impl<'a, B, F> MerInit<B, F>
 where
   B: interfaces::Backend<'a>,
-  B: 'static,
   F: interfaces::Frontend<'a, B>,
-  F: 'static,
 {
   pub fn init(self) -> Mer<'a, B, F> {
-    let backend = smart_pointer!(self.backend);
-    let frontend = smart_pointer!(self.frontend);
+    let backend = smart_lock!(self.backend);
+    let frontend = smart_lock!(self.frontend);
 
-    let frontend_receiver = clone!(frontend);
-    let backend_caller = clone!(backend);
+    let frontend_receiver = clone_lock!(frontend);
+    let backend_caller = clone_lock!(backend);
 
     access_mut!(backend)
       .unwrap()
-      .receiver(move |call: &Call<&B::Intermediate>| Ok(access!(frontend_receiver).unwrap().receive(call).unwrap()))
+      .receiver(smart_pointer!(move |call: &Call<&B::Intermediate>| {
+        Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
+      })) //TODO: fix error
       .unwrap();
 
     access_mut!(frontend)
       .unwrap()
-      .caller(move |call: &Call<&B::Intermediate>| {
-        access_mut!(backend_caller).unwrap().call(call)
-      })
+      .caller(smart_pointer!(move |call: &Call<&B::Intermediate>| {
+        access!(backend_caller).unwrap().call(call)
+      }))
       .unwrap();
 
     Mer {
       _phantom: PhantomData,
 
-      backend: clone!(backend),
-      frontend: clone!(frontend),
+      backend: clone_lock!(backend),
+      frontend: clone_lock!(frontend),
     }
   }
 }
 
 impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, F> {
   pub fn start(&mut self) -> Result<(), B::Error> {
-    access_mut!(self.backend).unwrap().start()
+    access!(self.backend).unwrap().start()
   }
 
   pub fn stop(&mut self) -> Result<(), B::Error> {
-    access_mut!(self.backend).unwrap().stop()
+    access!(self.backend).unwrap().stop()
   }
 
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&F) -> R {
@@ -111,11 +109,11 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
     }))
   }
 
-  pub fn frontend_clone(&self) -> SmartPointer<F> {
-    clone!(self.frontend)
+  pub fn frontend_clone(&self) -> smart_lock_type!(F) {
+    clone_lock!(self.frontend)
   }
 
-  pub fn backend_clone(&self) -> SmartPointer<F> {
-    clone!(self.frontend)
+  pub fn backend_clone(&self) -> smart_lock_type!(F) {
+    clone_lock!(self.frontend)
   }
 }
