@@ -32,6 +32,7 @@ pub enum Error {
   BindServer { source: hyper::Error },
   NoProcedureHeader { source: hyper::http::Error },
   GetCallLockInReceiver,
+  RuntimeCreation { source: std::io::Error }
 }
 pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
@@ -57,7 +58,6 @@ pub struct HttpInit {
   pub client: Client<HttpConnector<GaiResolver>, Body>,
   pub speak: Option<Uri>,
   pub listen: Option<SocketAddr>,
-  pub runtime: Runtime,
 }
 
 impl Default for HttpInit {
@@ -66,19 +66,18 @@ impl Default for HttpInit {
       client: Client::new(),
       speak: None,
       listen: None,
-      runtime: Runtime::new().unwrap(),
     }
   }
 }
 
-impl From<HttpInit> for Http {
+impl From<HttpInit> for Result<Http, Error> {
   fn from(from: HttpInit) -> Self {
     from.init()
   }
 }
 
 impl HttpInit {
-  pub fn init(self) -> Http {
+  pub fn init(self) -> Result<Http, Error> {
     trace!("HttpInit.init()");
     
     let http = Http {
@@ -86,12 +85,12 @@ impl HttpInit {
       speak: self.speak,
       listen: self.listen,
       receiver: None,
-      runtime: self.runtime,
+      runtime: Runtime::new().context(RuntimeCreation {})?
     };
 
     debug!("{:?}", &http);
 
-    http
+    Ok(http)
   }
 }
 
