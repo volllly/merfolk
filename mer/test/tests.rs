@@ -1,5 +1,4 @@
-use backends::{InProcess, InProcessChannel};
-use flexi_logger::Logger;
+use backends::InProcessChannel;
 use mer::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
@@ -9,31 +8,46 @@ fn add(a: i32, b: i32) -> i32 {
 
 #[test]
 fn register_http() {
-  let register = frontends::RegisterInit {}.init();
-  register.register("add", |(a, b)| add(a, b)).unwrap();
+  let register_caller = frontends::RegisterInit {}.init();
+  let register_receiver = frontends::RegisterInit {}.init();
+  register_caller.register("add", |(a, b)| add(a, b)).unwrap();
+  register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let mut mer = MerInit {
+  let mer_caller = MerInit {
     backend: backends::HttpInit {
-      speak: "http://localhost:8084".parse::<hyper::Uri>().unwrap().into(),
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084).into(),
+      speak: "http://localhost:8080".parse::<hyper::Uri>().unwrap().into(),
+      listen: None,
       ..Default::default()
     }
-    .init().unwrap(),
-    frontend: register,
+    .init()
+    .unwrap(),
+    frontend: register_caller,
   }
   .init();
 
-  mer.start().unwrap();
+  let mut mer_receiver = MerInit {
+    backend: backends::HttpInit {
+      speak: None,
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
+    frontend: register_receiver,
+  }
+  .init();
+
+  mer_receiver.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  let result: i32 = mer.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
+  let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
   assert_eq!(result, a + b);
 }
 
 #[test]
 fn register_in_process() {
   use std::sync::mpsc;
-  use std::sync::mpsc::{Sender, Receiver};
+  use std::sync::mpsc::{Receiver, Sender};
 
   let register_caller = frontends::RegisterInit {}.init();
   let register_receiver = frontends::RegisterInit {}.init();
@@ -41,15 +55,20 @@ fn register_in_process() {
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let (to, from): (Sender<InProcessChannel>, Receiver<InProcessChannel>) = mpsc::channel();
-  
-  let mut mer_caller = MerInit {
+
+  let mer_caller = MerInit {
     backend: backends::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
     frontend: register_caller,
   }
   .init();
 
   let mut mer_receiver = MerInit {
-    backend: backends::InProcessInit { from: from.into(), ..Default::default() }.init().unwrap(),
+    backend: backends::InProcessInit {
+      from: from.into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
     frontend: register_receiver,
   }
   .init();
@@ -63,8 +82,6 @@ fn register_in_process() {
 
 #[test]
 fn derive_http() {
-  Logger::with_str("trace").start().unwrap();
-
   #[mer_derive::frontend()]
   struct Data<T>
   where
@@ -89,11 +106,12 @@ fn derive_http() {
 
   let mer_call = MerInit {
     backend: backends::HttpInit {
-      speak: "http://localhost:8084".parse::<hyper::Uri>().unwrap().into(),
+      speak: "http://localhost:8081".parse::<hyper::Uri>().unwrap().into(),
       listen: None,
       ..Default::default()
     }
-    .init().unwrap(),
+    .init()
+    .unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
   }
   .init();
@@ -101,10 +119,11 @@ fn derive_http() {
   let mut mer_receive = MerInit {
     backend: backends::HttpInit {
       speak: None,
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084).into(),
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081).into(),
       ..Default::default()
     }
-    .init().unwrap(),
+    .init()
+    .unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
   }
   .init();
@@ -127,6 +146,8 @@ fn derive_http() {
 
 #[test]
 fn derive_in_process() {
+  use std::sync::mpsc;
+
   #[mer_derive::frontend()]
   struct Data<T>
   where
@@ -149,14 +170,27 @@ fn derive_in_process() {
     }
   }
 
-  let mut mer = MerInit {
-    backend: backends::InProcessInit { ..Default::default() }.init().unwrap(),
+  let (to, from): (mpsc::Sender<InProcessChannel>, mpsc::Receiver<InProcessChannel>) = mpsc::channel();
+
+  let mer_caller = MerInit {
+    backend: backends::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
   }
   .init();
 
-  mer.start().unwrap();
+  let mut mer_register = MerInit {
+    backend: backends::InProcessInit {
+      from: from.into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
+    frontend: DataInit::<i32> { offset: 32 }.init(),
+  }
+  .init();
+
+  mer_register.start().unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
-  assert_eq!(mer.frontend(|f| { f.add(a, b).unwrap() }).unwrap(), a + b);
+  assert_eq!(mer_caller.frontend(|f| { f.add(a, b).unwrap() }).unwrap(), a + b);
 }

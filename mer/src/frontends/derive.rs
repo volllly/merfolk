@@ -4,7 +4,7 @@ use snafu::Snafu;
 pub enum Error<B: core::fmt::Display> {
   FromBackend { from: B },
   UnknownProcedure,
-  MutexLock
+  MutexLock,
 }
 
 impl<B: snafu::Error> From<B> for Error<B> {

@@ -10,12 +10,12 @@ use hyper::{
 use hyper::http::Uri;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Response, Server};
-use std::{fmt::Debug, net::SocketAddr};
 use std::sync::{Arc, Mutex};
+use std::{fmt::Debug, net::SocketAddr};
 use tokio::runtime::Runtime;
 use tokio::sync;
 
-use log::{trace, debug};
+use log::{debug, trace};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -32,7 +32,7 @@ pub enum Error {
   BindServer { source: hyper::Error },
   NoProcedureHeader { source: hyper::http::Error },
   GetCallLockInReceiver,
-  RuntimeCreation { source: std::io::Error }
+  RuntimeCreation { source: std::io::Error },
 }
 pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
@@ -79,13 +79,13 @@ impl From<HttpInit> for Result<Http, Error> {
 impl HttpInit {
   pub fn init(self) -> Result<Http, Error> {
     trace!("HttpInit.init()");
-    
+
     let http = Http {
       client: self.client,
       speak: self.speak,
       listen: self.listen,
       receiver: None,
-      runtime: Runtime::new().context(RuntimeCreation {})?
+      runtime: Runtime::new().context(RuntimeCreation {})?,
     };
 
     debug!("{:?}", &http);
@@ -106,9 +106,9 @@ impl<'a> interfaces::Backend<'a> for Http {
     let receiver = Arc::clone(self.receiver.as_ref().context(NoReceiver)?);
 
     self.runtime.spawn(async move {
-    trace!("Http.runtime.spawn()");
+      trace!("Http.runtime.spawn()");
 
-    let receiver = receiver.clone();
+      let receiver = receiver.clone();
 
       Server::bind(&listen)
         .serve(make_service_fn(move |_| {
@@ -141,7 +141,7 @@ impl<'a> interfaces::Backend<'a> for Http {
                   Ok(body) => body,
                   Err(e) => return Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(e.to_string())),
                 };
-                
+
                 debug!("call Call {{ procedure: {:?}, payload: {:?} }}", &procedure, &body);
                 let reply_mutex = receiver(Arc::new(Mutex::new(crate::Call { procedure, payload: &body })));
 
@@ -153,7 +153,7 @@ impl<'a> interfaces::Backend<'a> for Http {
                   Ok(reply) => {
                     debug!("reply Reply {{ payload: {:?} }}", &reply.payload);
                     Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned()))
-                  },
+                  }
                 }
               }
             }))

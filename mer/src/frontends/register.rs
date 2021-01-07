@@ -10,7 +10,7 @@ use snafu::Snafu;
 #[derive(Debug, Snafu)]
 pub enum Error<B: core::fmt::Display> {
   FromBackend { from: B },
-  ProcedureNotRegistered {}
+  ProcedureNotRegistered {},
 }
 
 impl<B: snafu::Error> From<B> for Error<B> {
@@ -23,7 +23,8 @@ pub struct Register<'a, B: Backend<'a>> {
   #[allow(clippy::type_complexity)]
   procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> + 'a>>>>,
 
-  call: Option<Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send>>
+  #[allow(clippy::type_complexity)]
+  call: Option<Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send>>,
 }
 
 unsafe impl<'a, T: Backend<'a>> Send for Register<'a, T> {}
@@ -41,7 +42,7 @@ impl RegisterInit {
     Register {
       procedures: Arc::new(Mutex::new(HashMap::new())),
 
-      call: None
+      call: None,
     }
   }
 }
@@ -62,10 +63,13 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
   }
 
   pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R, Error<B::Error>> {
-    Ok(B::deserialize(&self.call.as_ref().unwrap()(&crate::Call {
-      procedure: procedure.to_string(),
-      payload: &B::serialize(&payload)?
-    })?.payload)?)
+    Ok(B::deserialize(
+      &self.call.as_ref().unwrap()(&crate::Call {
+        procedure: procedure.to_string(),
+        payload: &B::serialize(&payload)?,
+      })?
+      .payload,
+    )?)
   }
 }
 
@@ -78,7 +82,7 @@ where
 
   fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send
+    T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send,
   {
     self.call = Some(Box::new(caller));
     Ok(())

@@ -1,7 +1,7 @@
+use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, ItemTrait, ItemStruct, AttributeArgs};
-use darling::FromMeta;
+use syn::{parse_macro_input, AttributeArgs, ItemStruct, ItemTrait};
 
 #[macro_use]
 mod frontend;
@@ -17,20 +17,18 @@ pub fn frontend(args: TokenStream, input: TokenStream) -> TokenStream {
 
   let args_parsed = match frontend::AttrArgs::from_list(&args) {
     Ok(v) => v,
-    Err(e) => { return TokenStream::from(e.write_errors()); }
+    Err(e) => {
+      return TokenStream::from(e.write_errors());
+    }
   };
 
   if args_parsed.target.is_some() {
     let input = parse_macro_input!(input as ItemTrait);
 
-    frontend::expand_trait(&args_parsed, &input)
-    .unwrap_or_else(to_compile_errors)
-    .into()
+    frontend::expand_trait(&args_parsed, &input).unwrap_or_else(to_compile_errors).into()
   } else {
     let input = parse_macro_input!(input as ItemStruct);
 
-    frontend::expand_struct(&args_parsed, &input)
-    .unwrap_or_else(to_compile_errors)
-    .into()
+    frontend::expand_struct(&input).unwrap_or_else(to_compile_errors).into()
   }
 }

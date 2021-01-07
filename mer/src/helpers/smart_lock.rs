@@ -19,8 +19,6 @@ macro_rules! smart_lock_type {
   }
 }
 
-
-
 #[cfg(all(feature = "std", feature = "threadsafe"))]
 macro_rules! smart_lock {
   ($x:expr) => {

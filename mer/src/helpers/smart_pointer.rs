@@ -1,9 +1,5 @@
-#[cfg(not(feature = "threadsafe"))]
-use alloc::rc::Rc;
 #[cfg(feature = "threadsafe")]
-use alloc::sync::Arc;
-
-#[cfg(feature = "threadsafe")]
+#[allow(unused_macros)]
 macro_rules! smart_pointer_type {
   ($x:ty) => {
     alloc::sync::Arc<$x>
@@ -18,6 +14,7 @@ macro_rules! smart_pointer_type {
 }
 
 #[cfg(feature = "threadsafe")]
+#[allow(unused_macros)]
 macro_rules! smart_pointer {
   ($x:expr) => {
     alloc::sync::Arc::new($x)
@@ -31,6 +28,7 @@ macro_rules! smart_pointer {
   };
 }
 
+#[allow(unused_macros)]
 macro_rules! clone_pointer {
   ($x:expr) => {
     $x.clone()

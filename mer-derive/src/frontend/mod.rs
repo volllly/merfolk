@@ -1,6 +1,6 @@
-use proc_macro2::{TokenStream};
-use quote::{quote, format_ident};
 use darling::FromMeta;
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
 
 #[derive(Debug, FromMeta)]
 pub struct AttrArgs {
@@ -15,107 +15,128 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
   let where_clause = &trait_generics.where_clause;
 
   let items = &input.items;
-  let item_methods: Vec<syn::TraitItemMethod> = items.iter().filter_map(|i| match i {
-    syn::TraitItem::Method(m) => {
-      let mut method = m.clone();
-      method.default.take();
-      Some(method)
-    },
-    _ => None
-  }).collect();
+  let item_methods: Vec<syn::TraitItemMethod> = items
+    .iter()
+    .filter_map(|i| match i {
+      syn::TraitItem::Method(m) => {
+        let mut method = m.clone();
+        method.default.take();
+        Some(method)
+      }
+      _ => None,
+    })
+    .collect();
 
   let mut impl_generic_def = trait_generics.clone();
-  impl_generic_def.params.insert(0, syn::parse_quote!{ __B: mer::interfaces::Backend<'__a> });
-  impl_generic_def.params.insert(0, syn::parse_quote!{ '__a });
+  impl_generic_def.params.insert(0, syn::parse_quote! { __B: mer::interfaces::Backend<'__a> });
+  impl_generic_def.params.insert(0, syn::parse_quote! { '__a });
 
   let mut impl_generics = trait_generics.clone();
-  impl_generics.params.insert(0, syn::parse_quote!{ __B });
-  impl_generics.params.insert(0, syn::parse_quote!{ '__a });
+  impl_generics.params.insert(0, syn::parse_quote! { __B });
+  impl_generics.params.insert(0, syn::parse_quote! { '__a });
 
-  let receiver_impl_items: Vec<TokenStream> = item_methods.iter().map(|i| {
-    let item_name = format_ident!("{}", &i.sig.ident);
-    let mut has_self: bool = false;
-    let arguments: Vec<&Box<syn::Type>> = i.sig.inputs.iter().filter_map(|a| {
-      match a {
-        syn::FnArg::Typed(t) => Some(&t.ty),
-        syn::FnArg::Receiver(_) => {
-          has_self = true;
-          None
+  let receiver_impl_items: Vec<TokenStream> = item_methods
+    .iter()
+    .map(|i| {
+      let item_name = format_ident!("{}", &i.sig.ident);
+      let mut has_self: bool = false;
+      let arguments: Vec<&Box<syn::Type>> = i
+        .sig
+        .inputs
+        .iter()
+        .filter_map(|a| match a {
+          syn::FnArg::Typed(t) => Some(&t.ty),
+          syn::FnArg::Receiver(_) => {
+            has_self = true;
+            None
+          }
+        })
+        .collect();
+      let index = (0..arguments.len()).map(syn::Index::from);
+
+      let deser = quote! {
+        let deser_payload = __B::deserialize::<(#( #arguments ),*)>(call.payload)?;
+      };
+
+      let reply = match has_self {
+        true => quote! {
+          let reply = <Self as #trait_name #impl_generics>::#item_name(self, #( deser_payload.#index),*);
         },
-      }
-    }).collect();
-    let index = (0..arguments.len()).map(syn::Index::from);
-
-    let deser = quote! {
-      let deser_payload = __B::deserialize::<(#( #arguments ),*)>(call.payload)?;
-    };
-
-    let reply = match has_self {
-      true => quote! {
-        let reply = <Self as #trait_name #impl_generics>::#item_name(self, #( deser_payload.#index),*);
-      },
-      false => quote! {
-        let reply = <Self as #trait_name #impl_generics>::#item_name(#( deser_payload.#index),*);
-      }
-    };
-
-    let ser = quote! {
-      let ser_reply = __B::serialize(&reply)?;
-      Ok(mer::Reply { payload: ser_reply })
-    };
-
-    quote! {
-      stringify!(#item_name) => {
-        log::debug!("frontend procedure receiving: {}", stringify!(#item_name));
-
-        #deser
-        #reply
-        #ser
-      }
-    }
-  }).collect();
-
-  let caller_impl_items: Vec<TokenStream> = item_methods.iter().map(|i| {
-    let item_name = &i.sig.ident;
-    let mut has_self = false;
-
-    let arguments: Vec<&syn::Ident> = i.sig.inputs.iter().filter_map(|a| {
-      match a {
-        syn::FnArg::Typed(t) => if let syn::Pat::Ident(ident) = &*t.pat { Some(&ident.ident) } else { None },
-        syn::FnArg::Receiver(_) => {
-          has_self = true;
-          None
+        false => quote! {
+          let reply = <Self as #trait_name #impl_generics>::#item_name(#( deser_payload.#index),*);
         },
+      };
+
+      let ser = quote! {
+        let ser_reply = __B::serialize(&reply)?;
+        Ok(mer::Reply { payload: ser_reply })
+      };
+
+      quote! {
+        stringify!(#item_name) => {
+          log::debug!("frontend procedure receiving: {}", stringify!(#item_name));
+
+          #deser
+          #reply
+          #ser
+        }
       }
-    }).collect();
+    })
+    .collect();
 
-    let mut signature = i.sig.inputs.clone();
-    if !has_self {
-      signature.insert(0, syn::parse_quote! { &self })
-    }
-    let old_return_type: syn::Type = match &i.sig.output {
-      syn::ReturnType::Default => syn::parse_quote!{ () },
-      syn::ReturnType::Type(_, t) => syn::parse_quote!{ #t }
-    };
-    let return_type: syn::ReturnType = syn::parse_quote! { -> Result<#old_return_type, mer::frontends::derive::Error<__B::Error>> };
+  let caller_impl_items: Vec<TokenStream> = item_methods
+    .iter()
+    .map(|i| {
+      let item_name = &i.sig.ident;
+      let mut has_self = false;
 
-    quote! {
-      pub fn #item_name(#signature) #return_type {
-        log::debug!("frontend procedure calling: {}", stringify!(#item_name));
+      let arguments: Vec<&syn::Ident> = i
+        .sig
+        .inputs
+        .iter()
+        .filter_map(|a| match a {
+          syn::FnArg::Typed(t) => {
+            if let syn::Pat::Ident(ident) = &*t.pat {
+              Some(&ident.ident)
+            } else {
+              None
+            }
+          }
+          syn::FnArg::Receiver(_) => {
+            has_self = true;
+            None
+          }
+        })
+        .collect();
 
-        let ser_payload = __B::serialize(&(#( #arguments ),*))?;
-
-        let reply = self.__call.as_ref().unwrap()(&mer::Call {
-          procedure: stringify!(#item_name).to_string(),
-          payload: &ser_payload,
-        })?
-        .payload;
-
-        let deser_reply = __B::deserialize::<#old_return_type>(&reply);
-        Ok(deser_reply?)
+      let mut signature = i.sig.inputs.clone();
+      if !has_self {
+        signature.insert(0, syn::parse_quote! { &self })
       }
-    }
-  }).collect();
+      let old_return_type: syn::Type = match &i.sig.output {
+        syn::ReturnType::Default => syn::parse_quote! { () },
+        syn::ReturnType::Type(_, t) => syn::parse_quote! { #t },
+      };
+      let return_type: syn::ReturnType = syn::parse_quote! { -> Result<#old_return_type, mer::frontends::derive::Error<__B::Error>> };
+
+      quote! {
+        pub fn #item_name(#signature) #return_type {
+          log::debug!("frontend procedure calling: {}", stringify!(#item_name));
+
+          let ser_payload = __B::serialize(&(#( #arguments ),*))?;
+
+          let reply = self.__call.as_ref().unwrap()(&mer::Call {
+            procedure: stringify!(#item_name).to_string(),
+            payload: &ser_payload,
+          })?
+          .payload;
+
+          let deser_reply = __B::deserialize::<#old_return_type>(&reply);
+          Ok(deser_reply?)
+        }
+      }
+    })
+    .collect();
 
   Ok(quote! {
     trait #trait_name #impl_generic_def #where_clause {
@@ -142,43 +163,40 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
   })
 }
 
-pub fn expand_struct(args: &AttrArgs, input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Error>> {
-
+pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Error>> {
   let struct_name = &input.ident;
   let struct_name_init = format_ident!("{}Init", &input.ident);
   let struct_generics = &input.generics;
   let where_clause = &struct_generics.where_clause;
-  
+
   let fields = match &input.fields {
     syn::Fields::Named(named) => {
       let fields: Vec<&syn::Field> = named.named.iter().collect();
       quote! { #( #fields ),* }
-    },
-    rest => quote! { #rest }
+    }
+    rest => quote! { #rest },
   };
-  
+
   let field_names = match &input.fields {
-    syn::Fields::Named(named) => {
-      named.named.iter().filter_map(|f| f.ident.clone()).map(|f| quote! { #f: self.#f }).collect()
-    },
-    _ => vec![]
+    syn::Fields::Named(named) => named.named.iter().filter_map(|f| f.ident.clone()).map(|f| quote! { #f: self.#f }).collect(),
+    _ => vec![],
   };
 
   let mut impl_generic_def = struct_generics.clone();
-  impl_generic_def.params.insert(0, syn::parse_quote!{ __B: mer::interfaces::Backend<'__a> });
-  impl_generic_def.params.insert(0, syn::parse_quote!{ '__a });
+  impl_generic_def.params.insert(0, syn::parse_quote! { __B: mer::interfaces::Backend<'__a> });
+  impl_generic_def.params.insert(0, syn::parse_quote! { '__a });
 
   let mut impl_generics = struct_generics.clone();
-  impl_generics.params.insert(0, syn::parse_quote!{ __B });
-  impl_generics.params.insert(0, syn::parse_quote!{ '__a });
-  
+  impl_generics.params.insert(0, syn::parse_quote! { __B });
+  impl_generics.params.insert(0, syn::parse_quote! { '__a });
+
   Ok(quote! {
     struct #struct_name #impl_generic_def #where_clause {
       #fields,
-      
+
       __call: Option<Box<dyn Fn(&mer::Call<&__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, __B::Error> + '__a + Send>>
     }
-    
+
     #[derive(Default)]
     struct #struct_name_init #struct_generics #where_clause {
       #fields,

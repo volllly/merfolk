@@ -16,11 +16,11 @@ use core::marker::PhantomData;
 
 use snafu::Snafu;
 
-use log::{trace, debug};
+use log::trace;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-  Lock {}
+  Lock {},
 }
 
 pub struct Call<T> {
@@ -70,7 +70,7 @@ where
       .unwrap()
       .receiver(move |call: &Call<&B::Intermediate>| {
         trace!("Mer.backend.receiver()");
-        
+
         Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
       }) //TODO: fix error
       .unwrap();
@@ -104,19 +104,25 @@ impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, 
     access!(self.backend).unwrap().stop()
   }
 
-  pub fn frontend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&F) -> R {
+  pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>
+  where
+    T: Fn(&F) -> R,
+  {
     trace!("MerInit.frontend()");
     Ok(access(&*match access!(self.frontend) {
       Ok(frontend) => frontend,
-      Err(_) => return Err(Error::Lock {})
+      Err(_) => return Err(Error::Lock {}),
     }))
   }
 
-  pub fn backend<T, R>(&self, access: T) -> Result<R, Error> where T: Fn(&B) -> R {
+  pub fn backend<T, R>(&self, access: T) -> Result<R, Error>
+  where
+    T: Fn(&B) -> R,
+  {
     trace!("MerInit.backend()");
     Ok(access(&*match access!(self.backend) {
       Ok(backend) => backend,
-      Err(_) => return Err(Error::Lock {})
+      Err(_) => return Err(Error::Lock {}),
     }))
   }
 }
