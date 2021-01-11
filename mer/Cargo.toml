@@ -30,7 +30,7 @@ mer_derive = { path = "../mer-derive", optional = true }
 
 [dev-dependencies]
 rand = "0.8"
-flexi_logger = "0.16"
+flexi_logger = "0.17"
 
 [[test]]
 name = "test"
