@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use snafu::Snafu;
 
-use log::{trace};
+use log::trace;
 
 #[derive(Debug, Snafu)]
 pub enum Error<B: core::fmt::Display> {

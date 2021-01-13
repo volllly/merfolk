@@ -2,8 +2,6 @@ use mer::*;
 
 #[test]
 fn derive_in_process() {
-  use std::sync::mpsc;
-
   #[mer_frontend_derive::frontend()]
   struct Data<T>
   where
@@ -26,7 +24,10 @@ fn derive_in_process() {
     }
   }
 
-  let (to, from): (tokio::sync::mpsc::Sender<mer_backend_in_process::InProcessChannel>, tokio::sync::mpsc::Receiver<mer_backend_in_process::InProcessChannel>) = tokio::sync::mpsc::channel(1);
+  let (to, from): (
+    tokio::sync::mpsc::Sender<mer_backend_in_process::InProcessChannel>,
+    tokio::sync::mpsc::Receiver<mer_backend_in_process::InProcessChannel>,
+  ) = tokio::sync::mpsc::channel(1);
 
   let mer_caller = MerInit {
     backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),

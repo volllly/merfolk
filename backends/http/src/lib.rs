@@ -15,7 +15,7 @@ use std::{fmt::Debug, net::SocketAddr};
 use tokio::runtime::Runtime;
 use tokio::sync;
 
-use log::{info, debug, trace};
+use log::{debug, info, trace};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -35,7 +35,7 @@ pub enum Error {
   RuntimeCreation { source: std::io::Error },
   AlreadyStarted,
   NotStarted,
-  Shutdown { }
+  Shutdown {},
 }
 pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
@@ -45,7 +45,7 @@ pub struct Http {
   receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
   runtime: Runtime,
 
-  shutdown: Option<sync::oneshot::Sender<()>>
+  shutdown: Option<sync::oneshot::Sender<()>>,
 }
 
 impl Debug for Http {
@@ -175,7 +175,9 @@ impl Backend<'_> for Http {
             }))
           }
         }))
-        .with_graceful_shutdown(async { rx.await.ok(); })
+        .with_graceful_shutdown(async {
+          rx.await.ok();
+        })
         .await
         .unwrap();
     });
@@ -186,7 +188,7 @@ impl Backend<'_> for Http {
     trace!("stop http backend");
     match self.shutdown.take() {
       None => Err(Error::NotStarted),
-      Some(tx) => tx.send(()).map_err(|_| Error::Shutdown {})
+      Some(tx) => tx.send(()).map_err(|_| Error::Shutdown {}),
     }
   }
 
@@ -264,9 +266,8 @@ impl Backend<'_> for Http {
   }
 }
 
-
 impl Drop for Http {
   fn drop(&mut self) {
-      self.stop().unwrap()
+    self.stop().unwrap()
   }
 }

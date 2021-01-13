@@ -1,0 +1,28 @@
+[package]
+name = "mer_frontend_logger"
+version = "0.1.0"
+authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
+edition = "2018"
+
+[features]
+
+[dependencies]
+mer = { path = "../../mer" }
+
+serde = "1.0.116"
+
+snafu = { version = "0.6.9" }
+log = { version = "0.4" }
+
+[dev-dependencies]
+mer_backend_in_process = { path = "../../backends/in-process" }
+
+hyper = "0.14"
+rand = "0.8"
+flexi_logger = "0.16"
+tokio = { version = "1.0", features = ["sync"] }
+rusty-fork = "0.3.0"
+
+[[test]]
+name = "test"
+path = "test/tests.rs"

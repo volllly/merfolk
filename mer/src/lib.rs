@@ -28,7 +28,6 @@ pub struct Call<T> {
 }
 unsafe impl<T> Send for Call<T> where T: Send {}
 
-
 #[derive(Debug)]
 pub struct Reply<T> {
   pub payload: T,

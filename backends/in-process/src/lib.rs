@@ -6,9 +6,12 @@ use std::sync::{Arc, Mutex};
 
 use tokio::runtime::Runtime;
 
-use tokio::sync::{mpsc, mpsc::{Sender, Receiver}};
+use tokio::sync::{
+  mpsc,
+  mpsc::{Receiver, Sender},
+};
 
-use log::{trace};
+use log::trace;
 
 pub type InProcessChannel = (Call<String>, Sender<Result<Reply<String>, Error>>);
 
@@ -20,12 +23,12 @@ pub enum Error {
   NoReceiver {},
   NoCallerChannel {},
   NoReceiverChannel {},
-  CallerRecv { },
+  CallerRecv {},
   CallerSend { source: tokio::sync::mpsc::error::SendError<InProcessChannel> },
   ReplyError { from: String },
   RuntimeCreation { source: std::io::Error },
   AlreadyStarted,
-  NotStarted
+  NotStarted,
 }
 
 pub struct InProcess {
@@ -61,7 +64,7 @@ impl InProcessInit {
       from: if let Some(from) = self.from { Some(Arc::new(tokio::sync::Mutex::new(from))) } else { None },
 
       runtime: Runtime::new().context(RuntimeCreation)?,
-      handle: None
+      handle: None,
     })
   }
 }
@@ -95,7 +98,8 @@ impl<'a> Backend<'a> for InProcess {
           Ok(r) => Ok(Reply { payload: r.payload.clone() }),
           Err(e) => Err(Error::ReplyError { from: format!("{:?}", e) }),
         })
-        .await.unwrap();
+        .await
+        .unwrap();
       }
     }));
 
@@ -104,10 +108,13 @@ impl<'a> Backend<'a> for InProcess {
 
   fn stop(&mut self) -> Result<(), Self::Error> {
     trace!("stop InProcessInit");
-    
+
     match &self.handle {
       None => Err(Error::NotStarted),
-      Some(handle) => { handle.abort(); Ok(()) }
+      Some(handle) => {
+        handle.abort();
+        Ok(())
+      }
     }
   }
 
@@ -135,7 +142,6 @@ impl<'a> Backend<'a> for InProcess {
     trace!("receive call");
 
     #[allow(clippy::type_complexity)]
-
     self.runtime.block_on(async {
       let (tx, mut rx): (Sender<Result<Reply<String>, Error>>, Receiver<Result<Reply<String>, Error>>) = mpsc::channel(1);
       self
@@ -148,7 +154,8 @@ impl<'a> Backend<'a> for InProcess {
             payload: call.payload.clone(),
           },
           tx,
-        )).await
+        ))
+        .await
         .context(CallerSend {})?;
 
       rx.recv().await.context(CallerRecv {})?
@@ -173,6 +180,6 @@ impl<'a> Backend<'a> for InProcess {
 
 impl Drop for InProcess {
   fn drop(&mut self) {
-      self.stop().unwrap()
+    self.stop().unwrap()
   }
 }

@@ -15,7 +15,6 @@ fn register_http() {
   let mer_caller = MerInit {
     backend: mer_backend_http::HttpInit {
       speak: "http://localhost:8080".parse::<hyper::Uri>().unwrap().into(),
-      listen: None,
       ..Default::default()
     }
     .init()
@@ -26,7 +25,6 @@ fn register_http() {
 
   let mut mer_receiver = MerInit {
     backend: mer_backend_http::HttpInit {
-      speak: None,
       listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).into(),
       ..Default::default()
     }
