@@ -19,6 +19,7 @@ mer_backend_in_process = { path = "../../backends/in-process" }
 
 rand = "0.8"
 flexi_logger = "0.16"
+tokio = { version = "1.0", features = ["sync"] }
 
 [[test]]
 name = "test"

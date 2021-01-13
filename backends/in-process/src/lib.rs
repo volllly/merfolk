@@ -2,11 +2,13 @@ use mer::{interfaces::Backend, Call, Reply};
 
 use snafu::{OptionExt, ResultExt, Snafu};
 
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
 use tokio::runtime::Runtime;
+
+use tokio::sync::{mpsc, mpsc::{Sender, Receiver}};
+
+use log::{trace};
 
 pub type InProcessChannel = (Call<String>, Sender<Result<Reply<String>, Error>>);
 
@@ -18,10 +20,12 @@ pub enum Error {
   NoReceiver {},
   NoCallerChannel {},
   NoReceiverChannel {},
-  CallerRecv { source: std::sync::mpsc::RecvError },
-  CallerSend { source: std::sync::mpsc::SendError<InProcessChannel> },
+  CallerRecv { },
+  CallerSend { source: tokio::sync::mpsc::error::SendError<InProcessChannel> },
   ReplyError { from: String },
   RuntimeCreation { source: std::io::Error },
+  AlreadyStarted,
+  NotStarted
 }
 
 pub struct InProcess {
@@ -30,8 +34,10 @@ pub struct InProcess {
 
   runtime: Runtime,
 
+  handle: Option<tokio::task::JoinHandle<std::convert::Infallible>>,
+
   to: Option<Sender<InProcessChannel>>,
-  from: Option<Arc<Mutex<Receiver<InProcessChannel>>>>,
+  from: Option<Arc<tokio::sync::Mutex<Receiver<InProcessChannel>>>>,
 }
 
 pub struct InProcessInit {
@@ -47,12 +53,15 @@ impl Default for InProcessInit {
 
 impl InProcessInit {
   pub fn init(self) -> Result<InProcess, Error> {
+    trace!("initialze InProcessInit");
+
     Ok(InProcess {
       receiver: None,
       to: self.to,
-      from: if let Some(from) = self.from { Some(Arc::new(Mutex::new(from))) } else { None },
+      from: if let Some(from) = self.from { Some(Arc::new(tokio::sync::Mutex::new(from))) } else { None },
 
       runtime: Runtime::new().context(RuntimeCreation)?,
+      handle: None
     })
   }
 }
@@ -62,12 +71,18 @@ impl<'a> Backend<'a> for InProcess {
   type Error = Error;
 
   fn start(&mut self) -> Result<(), Self::Error> {
+    trace!("start InProcessInit");
+
+    if self.handle.is_some() {
+      return Err(Error::AlreadyStarted);
+    }
+
     let from = self.from.as_ref().context(NoReceiverChannel {})?.clone();
     let receiver = self.receiver.as_ref().context(NoReceiver {})?.clone();
 
-    self.runtime.spawn(async move {
+    self.handle = Some(self.runtime.spawn(async move {
       loop {
-        let (call, tx) = from.lock().unwrap().recv().unwrap();
+        let (call, tx) = from.lock().await.recv().await.unwrap();
 
         let reply_mutex = receiver(Arc::new(Mutex::new(Call {
           procedure: call.procedure,
@@ -80,21 +95,28 @@ impl<'a> Backend<'a> for InProcess {
           Ok(r) => Ok(Reply { payload: r.payload.clone() }),
           Err(e) => Err(Error::ReplyError { from: format!("{:?}", e) }),
         })
-        .unwrap();
+        .await.unwrap();
       }
-    });
+    }));
 
     Ok(())
   }
 
   fn stop(&mut self) -> Result<(), Self::Error> {
-    Ok(())
+    trace!("stop InProcessInit");
+    
+    match &self.handle {
+      None => Err(Error::NotStarted),
+      Some(handle) => { handle.abort(); Ok(()) }
+    }
   }
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
     T: Fn(&Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
   {
+    trace!("register receiver");
+
     self.receiver = Some(Arc::new(move |call: Arc<Mutex<Call<&String>>>| {
       let call = match call.as_ref().lock() {
         Ok(c) => c,
@@ -110,25 +132,32 @@ impl<'a> Backend<'a> for InProcess {
   }
 
   fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
-    #[allow(clippy::type_complexity)]
-    let (tx, rx): (Sender<Result<Reply<String>, Error>>, Receiver<Result<Reply<String>, Error>>) = mpsc::channel();
-    self
-      .to
-      .as_ref()
-      .context(NoCallerChannel {})?
-      .send((
-        Call {
-          procedure: call.procedure.clone(),
-          payload: call.payload.clone(),
-        },
-        tx,
-      ))
-      .context(CallerSend {})?;
+    trace!("receive call");
 
-    rx.recv().context(CallerRecv {})?
+    #[allow(clippy::type_complexity)]
+
+    self.runtime.block_on(async {
+      let (tx, mut rx): (Sender<Result<Reply<String>, Error>>, Receiver<Result<Reply<String>, Error>>) = mpsc::channel(1);
+      self
+        .to
+        .as_ref()
+        .context(NoCallerChannel {})?
+        .send((
+          Call {
+            procedure: call.procedure.clone(),
+            payload: call.payload.clone(),
+          },
+          tx,
+        )).await
+        .context(CallerSend {})?;
+
+      rx.recv().await.context(CallerRecv {})?
+    })
   }
 
   fn serialize<T: serde::Serialize>(from: &T) -> Result<String, Self::Error> {
+    trace!("serialize from");
+
     serde_json::to_string(from).map_err(|e| Error::Serialize { from: e })
   }
 
@@ -136,6 +165,14 @@ impl<'a> Backend<'a> for InProcess {
   where
     T: for<'de> serde::Deserialize<'de>,
   {
+    trace!("deserialize from");
+
     serde_json::from_str(&from).map_err(|e| Error::Deserialize { from: e })
+  }
+}
+
+impl Drop for InProcess {
+  fn drop(&mut self) {
+      self.stop().unwrap()
   }
 }

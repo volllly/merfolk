@@ -6,15 +6,15 @@ fn add(a: i32, b: i32) -> i32 {
 
 #[test]
 fn register_in_process() {
-  use std::sync::mpsc;
-  use std::sync::mpsc::{Receiver, Sender};
+  use tokio::sync::mpsc;
+  use tokio::sync::mpsc::{Receiver, Sender};
 
   let register_caller = mer_frontend_register::RegisterInit {}.init();
   let register_receiver = mer_frontend_register::RegisterInit {}.init();
   register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let (to, from): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = mpsc::channel();
+  let (to, from): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = mpsc::channel(1);
 
   let mer_caller = MerInit {
     backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),

@@ -12,7 +12,7 @@ mer = { path = "../../mer" }
 serde = "1.0.116"
 serde_json = "1.0.57"
 
-tokio = { version = "1.0", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync"] }
 
 snafu = "0.6.9"
 log = "0.4"

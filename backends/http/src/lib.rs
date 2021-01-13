@@ -15,7 +15,7 @@ use std::{fmt::Debug, net::SocketAddr};
 use tokio::runtime::Runtime;
 use tokio::sync;
 
-use log::{debug, trace};
+use log::{info, debug, trace};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -33,6 +33,9 @@ pub enum Error {
   NoProcedureHeader { source: hyper::http::Error },
   GetCallLockInReceiver,
   RuntimeCreation { source: std::io::Error },
+  AlreadyStarted,
+  NotStarted,
+  Shutdown { }
 }
 pub struct Http {
   client: Client<HttpConnector<GaiResolver>, Body>,
@@ -41,6 +44,8 @@ pub struct Http {
   #[allow(clippy::type_complexity)]
   receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
   runtime: Runtime,
+
+  shutdown: Option<sync::oneshot::Sender<()>>
 }
 
 impl Debug for Http {
@@ -78,13 +83,14 @@ impl From<HttpInit> for Result<Http, Error> {
 
 impl HttpInit {
   pub fn init(self) -> Result<Http, Error> {
-    trace!("HttpInit.init()");
+    trace!("initialize HttpInit");
 
     let http = Http {
       client: self.client,
       speak: self.speak,
       listen: self.listen,
       receiver: None,
+      shutdown: None,
       runtime: Runtime::new().context(RuntimeCreation {})?,
     };
 
@@ -94,32 +100,42 @@ impl HttpInit {
   }
 }
 
-impl<'a> Backend<'a> for Http {
+impl Backend<'_> for Http {
   type Intermediate = String;
   type Error = Error;
 
   fn start(&mut self) -> Result<(), Self::Error> {
-    trace!("Http.start()");
+    trace!("start Http Backend");
+
+    if self.shutdown.is_some() {
+      return Err(Error::AlreadyStarted);
+    }
+
+    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+
+    self.shutdown = Some(tx);
 
     let listen = self.listen.context(NoListen)?;
 
     let receiver = Arc::clone(self.receiver.as_ref().context(NoReceiver)?);
 
     self.runtime.spawn(async move {
-      trace!("Http.runtime.spawn()");
+      trace!("spawn listener");
 
       let receiver = receiver.clone();
 
       Server::bind(&listen)
         .serve(make_service_fn(move |_| {
-          trace!("Http.runtime.spawn.serve()");
+          trace!("serve connection");
 
           let receiver = receiver.clone();
           async move {
             Ok::<_, hyper::Error>(service_fn(move |request: Request<Body>| {
-              trace!("Http.runtime.spawn.serve.service_fn()");
+              trace!("run service_fn");
 
               debug!("{:?}", &listen);
+
+              info!("received incomming call");
 
               let receiver = receiver.clone();
               async move {
@@ -159,6 +175,7 @@ impl<'a> Backend<'a> for Http {
             }))
           }
         }))
+        .with_graceful_shutdown(async { rx.await.ok(); })
         .await
         .unwrap();
     });
@@ -166,19 +183,21 @@ impl<'a> Backend<'a> for Http {
   }
 
   fn stop(&mut self) -> Result<(), Self::Error> {
-    trace!("Http.stop()");
-
-    Ok(())
+    trace!("stop http backend");
+    match self.shutdown.take() {
+      None => Err(Error::NotStarted),
+      Some(tx) => tx.send(()).map_err(|_| Error::Shutdown {})
+    }
   }
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
     T: Fn(&Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
   {
-    trace!("Http.receiver()");
+    trace!("register receiver");
 
     self.receiver = Some(Arc::new(move |call: Arc<Mutex<Call<&String>>>| {
-      trace!("(Http.receiver)()");
+      trace!("run receiver");
 
       let call = match call.as_ref().lock() {
         Ok(c) => c,
@@ -196,9 +215,11 @@ impl<'a> Backend<'a> for Http {
   }
 
   fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
-    trace!("Http.call()");
+    trace!("call backend");
 
     debug!("{:?}", &self.speak);
+
+    info!("received outgoing call");
 
     match &self.speak {
       None => Err(Error::SpeakingDisabled),
@@ -228,7 +249,7 @@ impl<'a> Backend<'a> for Http {
   }
 
   fn serialize<T: serde::Serialize>(from: &T) -> Result<String, Self::Error> {
-    trace!("Http.serialize()");
+    trace!("serialize from");
 
     serde_json::to_string(from).map_err(|e| Error::Serialize { from: e })
   }
@@ -237,8 +258,15 @@ impl<'a> Backend<'a> for Http {
   where
     T: for<'de> serde::Deserialize<'de>,
   {
-    trace!("Http.deserialize()");
+    trace!("deserialize from");
 
     serde_json::from_str(&from).map_err(|e| Error::Deserialize { from: e })
+  }
+}
+
+
+impl Drop for Http {
+  fn drop(&mut self) {
+      self.stop().unwrap()
   }
 }
