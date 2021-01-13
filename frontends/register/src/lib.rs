@@ -8,6 +8,8 @@ use std::sync::{Arc, Mutex};
 
 use snafu::Snafu;
 
+use log::{trace};
+
 #[derive(Debug, Snafu)]
 pub enum Error<B: core::fmt::Display> {
   FromBackend { from: B },
@@ -40,6 +42,8 @@ impl Default for RegisterInit {
 
 impl RegisterInit {
   pub fn init<'a, B: Backend<'a>>(self) -> Register<'a, B> {
+    trace!("initialize register");
+
     Register {
       procedures: Arc::new(Mutex::new(HashMap::new())),
 
@@ -53,6 +57,8 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
   where
     P: Fn(C) -> R + 'a,
   {
+    trace!("register procedure");
+
     self.procedures.lock().unwrap().insert(
       name.to_string(),
       Box::new(move |call: &Call<&B::Intermediate>| {
@@ -64,6 +70,8 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
   }
 
   pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R, Error<B::Error>> {
+    trace!("call procedure");
+
     Ok(B::deserialize(
       &self.call.as_ref().unwrap()(&Call {
         procedure: procedure.to_string(),
@@ -85,11 +93,15 @@ where
   where
     T: Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'a + Send,
   {
+    trace!("register caller");
+
     self.call = Some(Box::new(caller));
     Ok(())
   }
 
   fn receive(&self, call: &Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> {
+    trace!("receive call");
+
     self.procedures.lock().unwrap().get(&call.procedure).unwrap()(call)
   }
 }
