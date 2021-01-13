@@ -1,4 +1,5 @@
 use mer::*;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[test]
 fn logger_caller_in_process() {
@@ -42,4 +43,45 @@ fn logger_caller_in_process() {
   log::info!("test3");
   log::debug!("test4");
   log::trace!("test5");
+}
+
+
+#[test]
+fn logger_caller_http() {
+
+  let logger_receiver = mer_frontend_logger::LoggerInit {
+    sink: Some(Box::new(|level: log::Level, string: String| println!("[{}]: {}", level, string))),
+    ..Default::default()
+  }
+  .init();
+
+  let mut mer_receiver = MerInit {
+    backend: mer_backend_http::HttpInit {
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
+    frontend: logger_receiver,
+  }
+  .init();
+  
+  mer_receiver.start().unwrap();
+
+
+  let logger_caller = mer_frontend_logger::LoggerInit {
+    level: log::Level::Trace.into(),
+    ignore_crates: vec!["mer_backend_http"],
+    ..Default::default()
+  }
+  .init();
+
+
+  let _mer_caller = MerInit {
+    backend: mer_backend_http::HttpInit { speak: "http://localhost:8080".parse::<hyper::Uri>().unwrap().into(), ..Default::default() }.init().unwrap(),
+    frontend: logger_caller,
+  }
+  .init();
+
+  log::error!("test1");
 }
