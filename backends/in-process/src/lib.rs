@@ -1,4 +1,5 @@
-use crate::interfaces;
+use mer::{interfaces::Backend, Call, Reply};
+
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use std::sync::mpsc;
@@ -7,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use tokio::runtime::Runtime;
 
-pub type InProcessChannel = (crate::Call<String>, Sender<Result<crate::Reply<String>, Error>>);
+pub type InProcessChannel = (Call<String>, Sender<Result<Reply<String>, Error>>);
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -19,13 +20,13 @@ pub enum Error {
   NoReceiverChannel {},
   CallerRecv { source: std::sync::mpsc::RecvError },
   CallerSend { source: std::sync::mpsc::SendError<InProcessChannel> },
-  Reply { from: String },
+  ReplyError { from: String },
   RuntimeCreation { source: std::io::Error },
 }
 
 pub struct InProcess {
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<tokio::sync::Mutex<Result<crate::Reply<String>, Error>>> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<tokio::sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
 
   runtime: Runtime,
 
@@ -56,7 +57,7 @@ impl InProcessInit {
   }
 }
 
-impl<'a> interfaces::Backend<'a> for InProcess {
+impl<'a> Backend<'a> for InProcess {
   type Intermediate = String;
   type Error = Error;
 
@@ -68,7 +69,7 @@ impl<'a> interfaces::Backend<'a> for InProcess {
       loop {
         let (call, tx) = from.lock().unwrap().recv().unwrap();
 
-        let reply_mutex = receiver(Arc::new(Mutex::new(crate::Call {
+        let reply_mutex = receiver(Arc::new(Mutex::new(Call {
           procedure: call.procedure,
           payload: &call.payload,
         })));
@@ -76,8 +77,8 @@ impl<'a> interfaces::Backend<'a> for InProcess {
         let reply = &*reply_mutex.lock().await;
 
         tx.send(match reply {
-          Ok(r) => Ok(crate::Reply { payload: r.payload.clone() }),
-          Err(e) => Err(Error::Reply { from: format!("{:?}", e) }),
+          Ok(r) => Ok(Reply { payload: r.payload.clone() }),
+          Err(e) => Err(Error::ReplyError { from: format!("{:?}", e) }),
         })
         .unwrap();
       }
@@ -92,31 +93,31 @@ impl<'a> interfaces::Backend<'a> for InProcess {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
+    T: Fn(&Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
   {
-    self.receiver = Some(Arc::new(move |call: Arc<Mutex<crate::Call<&String>>>| {
+    self.receiver = Some(Arc::new(move |call: Arc<Mutex<Call<&String>>>| {
       let call = match call.as_ref().lock() {
         Ok(c) => c,
         Err(_) => return Arc::new(tokio::sync::Mutex::new(Err(Error::GetCallLockInReceiver {}))),
       };
 
       match receiver(&*call) {
-        Ok(reply) => Arc::new(tokio::sync::Mutex::new(Ok(crate::Reply { payload: reply.payload }))),
+        Ok(reply) => Arc::new(tokio::sync::Mutex::new(Ok(Reply { payload: reply.payload }))),
         Err(e) => Arc::new(tokio::sync::Mutex::new(Err(e))),
       }
     }));
     Ok(())
   }
 
-  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> {
+  fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
     #[allow(clippy::type_complexity)]
-    let (tx, rx): (Sender<Result<crate::Reply<String>, Error>>, Receiver<Result<crate::Reply<String>, Error>>) = mpsc::channel();
+    let (tx, rx): (Sender<Result<Reply<String>, Error>>, Receiver<Result<Reply<String>, Error>>) = mpsc::channel();
     self
       .to
       .as_ref()
       .context(NoCallerChannel {})?
       .send((
-        crate::Call {
+        Call {
           procedure: call.procedure.clone(),
           payload: call.payload.clone(),
         },

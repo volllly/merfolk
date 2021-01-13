@@ -1,5 +1,9 @@
 [workspace]
 members = [
   "mer",
-  "mer-derive"
+  "frontends/derive/core",
+  "frontends/derive/macros",
+  "frontends/register",
+  "backends/http",
+  "backends/in-process"
 ]

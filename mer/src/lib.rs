@@ -5,12 +5,10 @@ extern crate alloc;
 #[macro_use]
 pub mod helpers;
 
-#[cfg(feature = "backends")]
-pub mod backends;
-#[cfg(feature = "frontends")]
-pub mod frontends;
-
 pub mod interfaces;
+
+#[cfg(test)]
+mod test;
 
 use core::marker::PhantomData;
 

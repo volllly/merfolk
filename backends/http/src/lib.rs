@@ -1,4 +1,4 @@
-use crate::interfaces;
+use mer::{interfaces::Backend, Call, Reply};
 
 use snafu::{OptionExt, ResultExt, Snafu};
 
@@ -39,7 +39,7 @@ pub struct Http {
   speak: Option<Uri>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Arc<Mutex<crate::Call<&String>>>) -> Arc<sync::Mutex<Result<crate::Reply<String>, Error>>> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
   runtime: Runtime,
 }
 
@@ -94,7 +94,7 @@ impl HttpInit {
   }
 }
 
-impl<'a> interfaces::Backend<'a> for Http {
+impl<'a> Backend<'a> for Http {
   type Intermediate = String;
   type Error = Error;
 
@@ -173,11 +173,11 @@ impl<'a> interfaces::Backend<'a> for Http {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
+    T: Fn(&Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
   {
     trace!("Http.receiver()");
 
-    self.receiver = Some(Arc::new(move |call: Arc<Mutex<crate::Call<&String>>>| {
+    self.receiver = Some(Arc::new(move |call: Arc<Mutex<Call<&String>>>| {
       trace!("(Http.receiver)()");
 
       let call = match call.as_ref().lock() {
@@ -187,7 +187,7 @@ impl<'a> interfaces::Backend<'a> for Http {
 
       debug!("calling receiver");
       match receiver(&*call) {
-        Ok(reply) => Arc::new(sync::Mutex::new(Ok(crate::Reply { payload: reply.payload }))),
+        Ok(reply) => Arc::new(sync::Mutex::new(Ok(Reply { payload: reply.payload }))),
         Err(e) => Arc::new(sync::Mutex::new(Err(e))),
       }
     }));
@@ -195,7 +195,7 @@ impl<'a> interfaces::Backend<'a> for Http {
     Ok(())
   }
 
-  fn call(&mut self, call: &crate::Call<&Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> {
+  fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
     trace!("Http.call()");
 
     debug!("{:?}", &self.speak);
@@ -220,7 +220,7 @@ impl<'a> interfaces::Backend<'a> for Http {
         let body = String::from_utf8(body_bytes.to_vec()).context(ParseResponseBody)?;
 
         match status {
-          StatusCode::OK => Ok(crate::Reply { payload: body }),
+          StatusCode::OK => Ok(Reply { payload: body }),
           _ => Err(Error::FailedRequest { status }),
         }
       }),

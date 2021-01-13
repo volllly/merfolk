@@ -1,4 +1,4 @@
-use mer_derive::*;
+use mer_frontend_derive::*;
 
 #[test]
 fn test() {

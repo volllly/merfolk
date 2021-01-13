@@ -1,6 +1,7 @@
-use interfaces::Backend;
-
-use crate::interfaces;
+use mer::{
+  interfaces::{Backend, Frontend},
+  Call, Reply,
+};
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -21,10 +22,10 @@ impl<B: snafu::Error> From<B> for Error<B> {
 
 pub struct Register<'a, B: Backend<'a>> {
   #[allow(clippy::type_complexity)]
-  procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> + 'a>>>>,
+  procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> + 'a>>>>,
 
   #[allow(clippy::type_complexity)]
-  call: Option<Box<dyn Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send>>,
+  call: Option<Box<dyn Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'a + Send>>,
 }
 
 unsafe impl<'a, T: Backend<'a>> Send for Register<'a, T> {}
@@ -54,9 +55,9 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
   {
     self.procedures.lock().unwrap().insert(
       name.to_string(),
-      Box::new(move |call: &crate::Call<&B::Intermediate>| {
+      Box::new(move |call: &Call<&B::Intermediate>| {
         let reply = procedure(B::deserialize::<C>(call.payload)?);
-        Ok(crate::Reply { payload: B::serialize::<R>(&reply)? })
+        Ok(Reply { payload: B::serialize::<R>(&reply)? })
       }),
     );
     Ok(())
@@ -64,7 +65,7 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
 
   pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R, Error<B::Error>> {
     Ok(B::deserialize(
-      &self.call.as_ref().unwrap()(&crate::Call {
+      &self.call.as_ref().unwrap()(&Call {
         procedure: procedure.to_string(),
         payload: &B::serialize(&payload)?,
       })?
@@ -73,22 +74,22 @@ impl<'a, B: Backend<'a>> Register<'a, B> {
   }
 }
 
-impl<'a, B> interfaces::Frontend<'a, B> for Register<'a, B>
+impl<'a, B> Frontend<'a, B> for Register<'a, B>
 where
-  B: interfaces::Backend<'a>,
+  B: Backend<'a>,
 {
   type Intermediate = String;
   type Error = Error<B::Error>;
 
   fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
   where
-    T: Fn(&crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, B::Error> + 'a + Send,
+    T: Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'a + Send,
   {
     self.call = Some(Box::new(caller));
     Ok(())
   }
 
-  fn receive(&self, call: &crate::Call<&B::Intermediate>) -> Result<crate::Reply<B::Intermediate>, Error<B::Error>> {
+  fn receive(&self, call: &Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> {
     self.procedures.lock().unwrap().get(&call.procedure).unwrap()(call)
   }
 }

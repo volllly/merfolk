@@ -1,5 +1,5 @@
 [package]
-name = "mer_derive"
+name = "mer_frontend_derive_macros"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
@@ -8,7 +8,7 @@ edition = "2018"
 
 default = ["std"]
 
-std = []
+std = [ "log/std", "serde/std" ]
 
 [dependencies]
 syn = "1.0"
@@ -16,9 +16,13 @@ quote = "1.0"
 proc-macro2 = "1.0"
 darling = "0.12"
 log = { version = "0.4", default-features = false }
+
 [dev-dependencies]
-mer = { path = "../mer" }
-serde = "1.0"
+mer_frontend_derive = { path = "../core" }
+
+mer = { path = "../../../mer" }
+serde = { version = "1.0", default-features = false }
+
 [lib]
 proc-macro = true
 
