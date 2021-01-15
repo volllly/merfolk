@@ -21,7 +21,7 @@ log = "0.4"
 mer_frontend_register = { path = "../../frontends/register" }
 
 rand = "0.8"
-flexi_logger = "0.16"
+flexi_logger = "0.17"
 
 [[test]]
 name = "test"
