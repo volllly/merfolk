@@ -38,8 +38,7 @@ pub enum Error {
   Shutdown {},
 }
 pub struct Http {
-  client: Client<HttpConnector<GaiResolver>, Body>,
-  speak: Option<Uri>,
+  speak: Option<(Uri, Client<HttpConnector<GaiResolver>, Body>)>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
   receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
@@ -51,7 +50,6 @@ pub struct Http {
 impl Debug for Http {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
     f.debug_struct("Http")
-      .field("client", &self.client)
       .field("speak", &self.speak)
       .field("listen", &self.listen)
       .field("runtime", &self.runtime)
@@ -60,7 +58,8 @@ impl Debug for Http {
 }
 
 pub struct HttpInit {
-  pub client: Client<HttpConnector<GaiResolver>, Body>,
+  pub client: Option<Client<HttpConnector<GaiResolver>, Body>>,
+  pub runtime: Option<Runtime>,
   pub speak: Option<Uri>,
   pub listen: Option<SocketAddr>,
 }
@@ -68,7 +67,8 @@ pub struct HttpInit {
 impl Default for HttpInit {
   fn default() -> Self {
     HttpInit {
-      client: Client::new(),
+      runtime: None,
+      client: None,
       speak: None,
       listen: None,
     }
@@ -86,8 +86,13 @@ impl HttpInit {
     trace!("initialize HttpInit");
 
     let http = Http {
-      client: self.client,
-      speak: self.speak,
+      speak: match self.speak {
+        Some(uri) => match self.client {
+          Some(client) => (uri, client).into(),
+          None => (uri, Client::new()).into()
+        },
+        None => None
+      },
       listen: self.listen,
       receiver: None,
       shutdown: None,
@@ -226,16 +231,16 @@ impl Backend<'_> for Http {
     match &self.speak {
       None => Err(Error::SpeakingDisabled),
 
-      Some(uri) => self.runtime.block_on(async {
+      Some(speak) => self.runtime.block_on(async {
         let request = Request::builder()
           .method(Method::POST)
-          .uri(uri)
+          .uri(&speak.0)
           .header("Procedure", &call.procedure)
           .body(Body::from(call.payload.clone()))
           .context(RequestBuilder)?;
 
         debug!("request {:?}", &request);
-        let response = self.client.request(request).await.context(ClientRequest)?;
+        let response = speak.1.request(request).await.context(ClientRequest)?;
         debug!("response {:?}", &response);
 
         let status = response.status();

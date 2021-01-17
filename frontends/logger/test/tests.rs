@@ -57,7 +57,7 @@ fn logger_caller_http() {
 
   let mut mer_receiver = MerInit {
     backend: mer_backend_http::HttpInit {
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).into(),
+      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081).into(),
       ..Default::default()
     }
     .init()
@@ -78,7 +78,7 @@ fn logger_caller_http() {
 
 
   let _mer_caller = MerInit {
-    backend: mer_backend_http::HttpInit { speak: "http://localhost:8080".parse::<hyper::Uri>().unwrap().into(), ..Default::default() }.init().unwrap(),
+    backend: mer_backend_http::HttpInit { speak: "http://localhost:8081".parse::<hyper::Uri>().unwrap().into(), ..Default::default() }.init().unwrap(),
     frontend: logger_caller,
   }
   .init();
