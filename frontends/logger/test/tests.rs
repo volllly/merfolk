@@ -27,7 +27,7 @@ fn logger_caller_in_process() {
 
   let logger_caller = mer_frontend_logger::LoggerInit {
     level: log::Level::Trace.into(),
-    ignore_crates: vec!["mer_backend_in_process"],
+    ignore_targets: vec!["mer_backend_in_process"].into(),
     ..Default::default()
   }
   .init();
@@ -48,7 +48,6 @@ fn logger_caller_in_process() {
 
 #[test]
 fn logger_caller_http() {
-
   let logger_receiver = mer_frontend_logger::LoggerInit {
     sink: Some(Box::new(|level: log::Level, string: String| println!("[{}]: {}", level, string))),
     ..Default::default()
@@ -71,7 +70,7 @@ fn logger_caller_http() {
 
   let logger_caller = mer_frontend_logger::LoggerInit {
     level: log::Level::Trace.into(),
-    ignore_crates: vec!["mer_backend_http"],
+    allow_targets: vec!["test"].into(),
     ..Default::default()
   }
   .init();
@@ -84,4 +83,8 @@ fn logger_caller_http() {
   .init();
 
   log::error!("test1");
+  log::warn!("test2");
+  log::info!("test3");
+  log::debug!("test4");
+  log::trace!("test5");
 }

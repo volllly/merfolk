@@ -8,7 +8,7 @@ edition = "2018"
 
 default = ["std"]
 
-std = [ "log/std", "serde/std" ]
+std = [ "log/std"]
 
 [dependencies]
 syn = "1.0"

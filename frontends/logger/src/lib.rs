@@ -3,6 +3,8 @@ use mer::{
   Call, Reply,
 };
 
+use wildmatch::WildMatch;
+
 use std::{marker::PhantomData, sync::Arc};
 
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -26,7 +28,8 @@ impl<B: snafu::Error> From<B> for Error<B> {
 
 struct LoggerInstance {
   level: Level,
-  ignore_crates: Arc<Vec<&'static str>>,
+  ignore_targets: Arc<Option<Vec<&'static str>>>,
+  allow_targets: Arc<Option<Vec<&'static str>>>,
 
   #[allow(clippy::type_complexity)]
   call: Arc<dyn Fn(&Record) + 'static + Send + Sync>,
@@ -35,7 +38,8 @@ struct LoggerInstance {
 pub struct Logger<'a, B: Backend<'a>> {
   level: Option<Level>,
   sink: Option<Box<dyn Fn(Level, String)>>,
-  ignore_crates: Arc<Vec<&'static str>>,
+  ignore_targets: Arc<Option<Vec<&'static str>>>,
+  allow_targets: Arc<Option<Vec<&'static str>>>,
 
   __phantom: std::marker::PhantomData<&'a B>,
 }
@@ -45,7 +49,8 @@ unsafe impl<'a, T: Backend<'a>> Send for Logger<'a, T> {}
 pub struct LoggerInit {
   pub level: Option<Level>,
   pub sink: Option<Box<dyn Fn(Level, String)>>,
-  pub ignore_crates: Vec<&'static str>,
+  pub ignore_targets: Option<Vec<&'static str>>,
+  pub allow_targets: Option<Vec<&'static str>>,
 }
 
 impl Default for LoggerInit {
@@ -53,19 +58,23 @@ impl Default for LoggerInit {
     LoggerInit {
       level: None,
       sink: None,
-      ignore_crates: vec![],
+      ignore_targets: None,
+      allow_targets: None,
     }
   }
 }
 
 impl LoggerInit {
-  pub fn init<'a, B: Backend<'a>>(mut self) -> Logger<'a, B> {
-    self.ignore_crates.push("mer");
+  pub fn init<'a, B: Backend<'a>>(self) -> Logger<'a, B> {
+    let mut ignore_targets = self.ignore_targets.unwrap_or_default();
+
+    ignore_targets.push("mer");
 
     Logger {
       level: self.level,
       sink: self.sink,
-      ignore_crates: Arc::new(self.ignore_crates),
+      ignore_targets: Arc::new(ignore_targets.into()),
+      allow_targets: Arc::new(self.allow_targets),
 
       __phantom: PhantomData,
     }
@@ -74,7 +83,11 @@ impl LoggerInit {
 
 impl log::Log for LoggerInstance {
   fn enabled(&self, metadata: &Metadata) -> bool {
-    metadata.level() <= self.level && !self.ignore_crates.contains(&metadata.target())
+    metadata.level() <= self.level && !metadata.target().is_empty() && if let Some(ignore_targets) = self.ignore_targets.as_ref() {
+      !ignore_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
+    } else { true } && if let Some(allow_targets) = self.allow_targets.as_ref() {
+      allow_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
+    } else { true }
   }
 
   fn log(&self, record: &Record) {
@@ -100,7 +113,8 @@ where
     if let Some(level) = self.level {
       log::set_boxed_logger(Box::new(LoggerInstance {
         level,
-        ignore_crates: self.ignore_crates.clone(),
+        ignore_targets: self.ignore_targets.clone(),
+        allow_targets: self.allow_targets.clone(),
         call: Arc::new(move |record: &Record| {
           let args = match B::serialize(&record.args().to_string()) {
             Ok(ser) => ser,
