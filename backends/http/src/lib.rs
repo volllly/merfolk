@@ -59,7 +59,6 @@ impl Debug for Http {
 
 pub struct HttpInit {
   pub client: Option<Client<HttpConnector<GaiResolver>, Body>>,
-  pub runtime: Option<Runtime>,
   pub speak: Option<Uri>,
   pub listen: Option<SocketAddr>,
 }
@@ -67,7 +66,6 @@ pub struct HttpInit {
 impl Default for HttpInit {
   fn default() -> Self {
     HttpInit {
-      runtime: None,
       client: None,
       speak: None,
       listen: None,
@@ -273,6 +271,8 @@ impl Backend<'_> for Http {
 
 impl Drop for Http {
   fn drop(&mut self) {
-    self.stop().unwrap()
+    if self.shutdown.is_some() {
+      self.stop().unwrap()
+    }
   }
 }

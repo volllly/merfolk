@@ -141,8 +141,8 @@ impl<'a> Backend<'a> for InProcess {
   fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
     trace!("receive call");
 
-    #[allow(clippy::type_complexity)]
     self.runtime.block_on(async {
+      #[allow(clippy::type_complexity)]
       let (tx, mut rx): (Sender<Result<Reply<String>, Error>>, Receiver<Result<Reply<String>, Error>>) = mpsc::channel(1);
       self
         .to

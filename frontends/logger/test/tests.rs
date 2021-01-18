@@ -2,52 +2,53 @@ use mer::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[test]
-fn logger_caller_in_process() {
+fn logger_in_process() {
   use tokio::sync::mpsc::{channel, Receiver, Sender};
-  let (to, from): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = channel(1);
-
-  let logger_receiver = mer_frontend_logger::LoggerInit {
-    sink: Some(Box::new(|level: log::Level, string: String| println!("[{}]: {}", level, string))),
-    ..Default::default()
-  }
-  .init();
-
-  let mut mer_receiver = MerInit {
-    backend: mer_backend_in_process::InProcessInit {
-      from: from.into(),
+  
+  tokio::runtime::Runtime::new().unwrap().block_on(async {
+    let (to, from): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = channel(1);
+    let logger_receiver = mer_frontend_logger::LoggerInit {
+      sink: Some(Box::new(|level: log::Level, string: String| println!("[{}]: {}", level, string))),
       ..Default::default()
     }
-    .init()
-    .unwrap(),
-    frontend: logger_receiver,
-  }
-  .init();
+    .init();
 
-  mer_receiver.start().unwrap();
+    let mut mer_receiver = MerInit {
+      backend: mer_backend_in_process::InProcessInit {
+        from: from.into(),
+        ..Default::default()
+      }
+      .init()
+      .unwrap(),
+      frontend: logger_receiver,
+    }
+    .init();
 
-  let logger_caller = mer_frontend_logger::LoggerInit {
-    level: log::Level::Trace.into(),
-    ignore_targets: vec!["mer_backend_in_process"].into(),
-    ..Default::default()
-  }
-  .init();
+    mer_receiver.start().unwrap();
 
-  let _mer_caller = MerInit {
-    backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
-    frontend: logger_caller,
-  }
-  .init();
+    let logger_caller = mer_frontend_logger::LoggerInit {
+      level: log::Level::Trace.into(),
+      ignore_targets: vec!["mer_backend_in_process"].into(),
+      ..Default::default()
+    }
+    .init();
 
-  log::error!("test1");
-  log::warn!("test2");
-  log::info!("test3");
-  log::debug!("test4");
-  log::trace!("test5");
+    let _mer_caller = MerInit {
+      backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
+      frontend: logger_caller,
+    }
+    .init();
+
+    log::error!("test1");
+    log::warn!("test2");
+    log::info!("test3");
+    log::debug!("test4");
+    log::trace!("test5");
+  });
 }
 
-
 #[test]
-fn logger_caller_http() {
+fn logger_http() {
   let logger_receiver = mer_frontend_logger::LoggerInit {
     sink: Some(Box::new(|level: log::Level, string: String| println!("[{}]: {}", level, string))),
     ..Default::default()
@@ -64,9 +65,8 @@ fn logger_caller_http() {
     frontend: logger_receiver,
   }
   .init();
-  
-  mer_receiver.start().unwrap();
 
+  mer_receiver.start().unwrap();
 
   let logger_caller = mer_frontend_logger::LoggerInit {
     level: log::Level::Trace.into(),
@@ -75,9 +75,13 @@ fn logger_caller_http() {
   }
   .init();
 
-
   let _mer_caller = MerInit {
-    backend: mer_backend_http::HttpInit { speak: "http://localhost:8081".parse::<hyper::Uri>().unwrap().into(), ..Default::default() }.init().unwrap(),
+    backend: mer_backend_http::HttpInit {
+      speak: "http://localhost:8081".parse::<hyper::Uri>().unwrap().into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
     frontend: logger_caller,
   }
   .init();
@@ -87,4 +91,6 @@ fn logger_caller_http() {
   log::info!("test3");
   log::debug!("test4");
   log::trace!("test5");
+
+  mer_receiver.stop().unwrap();
 }
