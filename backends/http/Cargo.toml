@@ -21,7 +21,8 @@ serde_json = "1.0.57"
 hyper = { version = "0.14", features = ["client", "server", "tcp"] }
 tokio = { version = "1.0", features = ["rt", "rt-multi-thread"] }
 
-snafu = "0.6.9"
+anyhow = "1.0"
+thiserror = "1.0"
 log = "0.4"
 
 [dev-dependencies]

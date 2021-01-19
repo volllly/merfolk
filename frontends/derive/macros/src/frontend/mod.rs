@@ -117,7 +117,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
         syn::ReturnType::Default => syn::parse_quote! { () },
         syn::ReturnType::Type(_, t) => syn::parse_quote! { #t },
       };
-      let return_type: syn::ReturnType = syn::parse_quote! { -> Result<#old_return_type, mer_frontend_derive::Error<__B::Error>> };
+      let return_type: syn::ReturnType = syn::parse_quote! { -> anyhow::Result<#old_return_type> };
 
       quote! {
         pub fn #item_name(#signature) #return_type {
@@ -138,6 +138,11 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
     })
     .collect();
 
+  #[cfg(feature = "std")]
+  let error = quote! { Err(mer_frontend_derive::Error::UnknownProcedure { procedure: call.procedure }.into()) };
+  #[cfg(not(feature = "std"))]
+  let error = quote! { Err(anyhow::anyhow!("unknown procedure: {}", call.procedure)) };
+
   Ok(quote! {
     trait #trait_name #impl_generic_def #where_clause {
       #( #item_methods )*
@@ -148,10 +153,12 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
     }
 
     impl #impl_generic_def #service_name #impl_generics #where_clause {
-        fn __receive(&self, call: mer::Call<__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, mer_frontend_derive::Error<__B::Error>> {
+        fn __receive(&self, call: mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> {
           match call.procedure.as_str() {
             #( #receiver_impl_items ),*
-            _ => Err(mer_frontend_derive::Error::UnknownProcedure {}),
+            _ => {
+              #error
+            },
           }
         }
     }
@@ -194,7 +201,7 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
     struct #struct_name #impl_generic_def #where_clause {
       #fields,
 
-      __call: Option<Box<dyn Fn(mer::Call<__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, __B::Error> + '__a + Send>>
+      __call: Option<Box<dyn Fn(mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> + '__a + Send>>
     }
 
     #[derive(Default)]
@@ -215,17 +222,16 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
     impl #impl_generic_def mer::interfaces::Frontend for #struct_name #impl_generics #where_clause {
       type Backend = __B;
       type Intermediate = String;
-      type Error = mer_frontend_derive::Error<__B::Error>;
 
-      fn caller<__T>(&mut self, caller: __T) -> Result<(), mer_frontend_derive::Error<__B::Error>>
+      fn caller<__T>(&mut self, caller: __T) -> anyhow::Result<()>
       where
-        __T: Fn(mer::Call<__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, __B::Error> + '__a + Send,
+        __T: Fn(mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> + '__a + Send,
       {
         self.__call = Some(Box::new(caller));
         Ok(())
       }
 
-      fn receive(&self, call: mer::Call<__B::Intermediate>) -> Result<mer::Reply<__B::Intermediate>, mer_frontend_derive::Error<__B::Error>> {
+      fn receive(&self, call: mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> {
         log::debug!("receiving: Call {{ prodecure: {:?}, payload: ... }}", &call.procedure);
 
         self.__receive(call).map_err(core::convert::Into::into)

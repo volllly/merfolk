@@ -1,6 +1,7 @@
 use mer::{interfaces::Backend, Call, Reply};
 
-use snafu::{OptionExt, ResultExt, Snafu};
+use anyhow::Result;
+use thiserror::Error;
 
 use hyper::{
   client::{connect::dns::GaiResolver, HttpConnector},
@@ -17,31 +18,46 @@ use tokio::sync;
 
 use log::{debug, info, trace};
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum Error {
-  Serialize { from: serde_json::Error },
-  Deserialize { from: serde_json::Error },
-  SpeakingDisabled,
-  RequestBuilder { source: hyper::http::Error },
-  ParseResponseBodyBytes { source: hyper::Error },
-  ParseResponseBody { source: std::string::FromUtf8Error },
-  ClientRequest { source: hyper::Error },
+  #[error("serializing failed: {0}")]
+  Serialize(#[source] serde_json::Error),
+  #[error("deserializing failed {0}")]
+  Deserialize(#[source] serde_json::Error),
+  #[error("no speak provided in init()")]
+  NoSpeak,
+  #[error("error building request: {0}")]
+  RequestBuilder(#[source] hyper::http::Error),
+  #[error("error parsing body bytes: {0}")]
+  ParseResponseBodyBytes(#[source] hyper::Error),
+  #[error("error parsing body: {0}")]
+  ParseResponseBody(#[from] std::string::FromUtf8Error),
+  #[error("error while sending request: {0}")]
+  ClientRequest(#[source] hyper::Error),
+  #[error("request failed with statuscode {status}")]
   FailedRequest { status: StatusCode },
+  #[error("no listen provided in init()")]
   NoListen,
+  #[error("no receiver was degistered by init()")]
   NoReceiver,
-  BindServer { source: hyper::Error },
-  NoProcedureHeader { source: hyper::http::Error },
-  GetCallLockInReceiver,
-  RuntimeCreation { source: std::io::Error },
+  #[error("error binding server: {0}")]
+  BindServer(#[from] hyper::Error),
+  #[error("no procedure header in request: {0}")]
+  NoProcedureHeader(#[source] hyper::http::Error),
+  #[error("could not create runtime: {0}")]
+  RuntimeCreation(#[from] std::io::Error),
+  #[error("already started")]
   AlreadyStarted,
+  #[error("not started")]
   NotStarted,
-  Shutdown {},
+  #[error("could not send stoping message")]
+  Shutdown,
 }
 pub struct Http {
   speak: Option<(Uri, Client<HttpConnector<GaiResolver>, Body>)>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>, Error> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
   runtime: Runtime,
 
   shutdown: Option<sync::oneshot::Sender<()>>,
@@ -73,14 +89,14 @@ impl Default for HttpInit {
   }
 }
 
-impl From<HttpInit> for Result<Http, Error> {
+impl From<HttpInit> for Result<Http> {
   fn from(from: HttpInit) -> Self {
     from.init()
   }
 }
 
 impl HttpInit {
-  pub fn init(self) -> Result<Http, Error> {
+  pub fn init(self) -> Result<Http> {
     trace!("initialize HttpInit");
 
     let http = Http {
@@ -94,7 +110,7 @@ impl HttpInit {
       listen: self.listen,
       receiver: None,
       shutdown: None,
-      runtime: Runtime::new().context(RuntimeCreation {})?,
+      runtime: Runtime::new().map_err(Error::RuntimeCreation)?,
     };
 
     debug!("{:?}", &http);
@@ -105,22 +121,21 @@ impl HttpInit {
 
 impl Backend for Http {
   type Intermediate = String;
-  type Error = Error;
 
-  fn start(&mut self) -> Result<(), Self::Error> {
+  fn start(&mut self) -> Result<()> {
     trace!("start Http Backend");
 
     if self.shutdown.is_some() {
-      return Err(Error::AlreadyStarted);
+      return Err(Error::AlreadyStarted.into());
     }
 
     let (tx, rx) = tokio::sync::oneshot::channel::<()>();
 
     self.shutdown = Some(tx);
 
-    let listen = self.listen.context(NoListen)?;
+    let listen = self.listen.ok_or(Error::NoListen)?;
 
-    let receiver = Arc::clone(self.receiver.as_ref().context(NoReceiver)?);
+    let receiver = Arc::clone(self.receiver.as_ref().ok_or(Error::NoReceiver)?);
 
     self.runtime.spawn(async move {
       trace!("spawn listener");
@@ -185,17 +200,14 @@ impl Backend for Http {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<(), Self::Error> {
+  fn stop(&mut self) -> Result<()> {
     trace!("stop http backend");
-    match self.shutdown.take() {
-      None => Err(Error::NotStarted),
-      Some(tx) => tx.send(()).map_err(|_| Error::Shutdown {}),
-    }
+    self.shutdown.take().ok_or(Error::NotStarted)?.send(()).map_err(|_| Error::Shutdown.into())
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
+  fn receiver<T>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
+    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,
   {
     trace!("register receiver");
 
@@ -209,7 +221,7 @@ impl Backend for Http {
     Ok(())
   }
 
-  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
+  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> {
     trace!("call backend");
 
     debug!("{:?}", &self.speak);
@@ -217,7 +229,7 @@ impl Backend for Http {
     info!("received outgoing call");
 
     match &self.speak {
-      None => Err(Error::SpeakingDisabled),
+      None => Err(Error::NoSpeak.into()),
 
       Some(speak) => self.runtime.block_on(async {
         let request = Request::builder()
@@ -225,37 +237,37 @@ impl Backend for Http {
           .uri(&speak.0)
           .header("Procedure", &call.procedure)
           .body(Body::from(call.payload.clone()))
-          .context(RequestBuilder)?;
+          .map_err(Error::RequestBuilder)?;
 
         debug!("request {:?}", &request);
-        let response = speak.1.request(request).await.context(ClientRequest)?;
+        let response = speak.1.request(request).await.map_err(Error::ClientRequest)?;
         debug!("response {:?}", &response);
 
         let status = response.status();
-        let body_bytes = hyper::body::to_bytes(response.into_body()).await.context(ParseResponseBodyBytes)?;
-        let body = String::from_utf8(body_bytes.to_vec()).context(ParseResponseBody)?;
+        let body_bytes = hyper::body::to_bytes(response.into_body()).await.map_err(Error::ParseResponseBodyBytes)?;
+        let body = String::from_utf8(body_bytes.to_vec()).map_err(Error::ParseResponseBody)?;
 
         match status {
           StatusCode::OK => Ok(Reply { payload: body }),
-          _ => Err(Error::FailedRequest { status }),
+          _ => Err(Error::FailedRequest { status }.into()),
         }
       }),
     }
   }
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<String, Self::Error> {
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<String> {
     trace!("serialize from");
 
-    serde_json::to_string(from).map_err(|e| Error::Serialize { from: e })
+    serde_json::to_string(from).map_err(|e| Error::Serialize(e).into())
   }
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, Self::Error>
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
   where
     T: for<'de> serde::Deserialize<'de>,
   {
     trace!("deserialize from");
 
-    serde_json::from_str(&from).map_err(|e| Error::Deserialize { from: e })
+    serde_json::from_str(&from).map_err(|e| Error::Deserialize(e).into())
   }
 }
 

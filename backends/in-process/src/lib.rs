@@ -1,6 +1,7 @@
 use mer::{interfaces::Backend, Call, Reply};
 
-use snafu::{OptionExt, ResultExt, Snafu};
+use anyhow::Result;
+use thiserror::Error;
 
 use std::sync::Arc;
 
@@ -13,27 +14,35 @@ use tokio::sync::{
 
 use log::trace;
 
-pub type InProcessChannel = (Call<String>, Sender<Result<Reply<String>, Error>>);
+pub type InProcessChannel = (Call<String>, Sender<Result<Reply<String>>>);
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum Error {
-  Serialize { from: serde_json::Error },
-  Deserialize { from: serde_json::Error },
-  GetCallLockInReceiver {},
-  NoReceiver {},
-  NoCallerChannel {},
-  NoReceiverChannel {},
-  CallerRecv {},
-  CallerSend { source: tokio::sync::mpsc::error::SendError<InProcessChannel> },
-  ReplyError { from: String },
-  RuntimeCreation { source: std::io::Error },
+  #[error("derializing failed: {0}")]
+  Serialize(#[source] serde_json::Error),
+  #[error("deserializing failed: {0}")]
+  Deserialize(#[source] serde_json::Error),
+  #[error("no receiver was registered by the init() function")]
+  NoReceiver,
+  #[error("no `to` channel was provided in init()")]
+  NoCallerChannel,
+  #[error("no `from` channel was provided in init()")]
+  NoReceiverChannel,
+  #[error("recv() from `rx` channel failed")]
+  CallerRecv,
+  #[error("send() to `to` channel failed: {0}")]
+  CallerSend(#[from] tokio::sync::mpsc::error::SendError<InProcessChannel>),
+  #[error("could not create runtime: {0}")]
+  RuntimeCreation(#[from] std::io::Error),
+  #[error("already started")]
   AlreadyStarted,
+  #[error("not yet started")]
   NotStarted,
 }
 
 pub struct InProcess {
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>, Error> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
 
   runtime: Runtime,
 
@@ -55,7 +64,7 @@ impl Default for InProcessInit {
 }
 
 impl InProcessInit {
-  pub fn init(self) -> Result<InProcess, Error> {
+  pub fn init(self) -> Result<InProcess> {
     trace!("initialze InProcessInit");
 
     Ok(InProcess {
@@ -63,7 +72,7 @@ impl InProcessInit {
       to: self.to,
       from: if let Some(from) = self.from { Some(Arc::new(tokio::sync::Mutex::new(from))) } else { None },
 
-      runtime: Runtime::new().context(RuntimeCreation)?,
+      runtime: Runtime::new().map_err(Error::RuntimeCreation)?,
       handle: None,
     })
   }
@@ -71,17 +80,16 @@ impl InProcessInit {
 
 impl Backend for InProcess {
   type Intermediate = String;
-  type Error = Error;
 
-  fn start(&mut self) -> Result<(), Self::Error> {
+  fn start(&mut self) -> Result<()> {
     trace!("start InProcessInit");
 
     if self.handle.is_some() {
-      return Err(Error::AlreadyStarted);
+      return Err(Error::AlreadyStarted.into());
     }
 
-    let from = self.from.as_ref().context(NoReceiverChannel {})?.clone();
-    let receiver = self.receiver.as_ref().context(NoReceiver {})?.clone();
+    let from = self.from.as_ref().ok_or(Error::NoReceiverChannel)?.clone();
+    let receiver = self.receiver.as_ref().ok_or(Error::NoReceiver)?.clone();
 
     self.handle = Some(self.runtime.spawn(async move {
       loop {
@@ -92,23 +100,18 @@ impl Backend for InProcess {
           payload: call.payload,
         });
 
-        tx.send(match reply {
-          Ok(r) => Ok(Reply { payload: r.payload.clone() }),
-          Err(e) => Err(Error::ReplyError { from: format!("{:?}", e) }),
-        })
-        .await
-        .unwrap();
+        tx.send(reply).await.unwrap();
       }
     }));
 
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<(), Self::Error> {
+  fn stop(&mut self) -> Result<()> {
     trace!("stop InProcessInit");
 
     match &self.handle {
-      None => Err(Error::NotStarted),
+      None => Err(Error::NotStarted.into()),
       Some(handle) => {
         handle.abort();
         Ok(())
@@ -116,9 +119,9 @@ impl Backend for InProcess {
     }
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
+  fn receiver<T>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Error> + Send + Sync + 'static,
+    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,
   {
     trace!("register receiver");
 
@@ -126,16 +129,16 @@ impl Backend for InProcess {
     Ok(())
   }
 
-  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
+  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> {
     trace!("receive call");
 
     self.runtime.block_on(async {
       #[allow(clippy::type_complexity)]
-      let (tx, mut rx): (Sender<Result<Reply<String>, Error>>, Receiver<Result<Reply<String>, Error>>) = mpsc::channel(1);
+      let (tx, mut rx): (Sender<Result<Reply<String>>>, Receiver<Result<Reply<String>>>) = mpsc::channel(1);
       self
         .to
         .as_ref()
-        .context(NoCallerChannel {})?
+        .ok_or(Error::NoCallerChannel)?
         .send((
           Call {
             procedure: call.procedure.clone(),
@@ -144,25 +147,25 @@ impl Backend for InProcess {
           tx,
         ))
         .await
-        .context(CallerSend {})?;
+        .map_err(Error::CallerSend)?;
 
-      rx.recv().await.context(CallerRecv {})?
+      rx.recv().await.ok_or(Error::CallerRecv)?
     })
   }
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<String, Self::Error> {
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<String> {
     trace!("serialize from");
 
-    serde_json::to_string(from).map_err(|e| Error::Serialize { from: e })
+    serde_json::to_string(from).map_err(|e| Error::Serialize(e).into())
   }
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, Self::Error>
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
   where
     T: for<'de> serde::Deserialize<'de>,
   {
     trace!("deserialize from");
 
-    serde_json::from_str(&from).map_err(|e| Error::Deserialize { from: e })
+    serde_json::from_str(&from).map_err(|e| Error::Deserialize(e).into())
   }
 }
 

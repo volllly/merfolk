@@ -7,23 +7,21 @@ use wildmatch::WildMatch;
 
 use std::{marker::PhantomData, sync::Arc};
 
-use snafu::{OptionExt, ResultExt, Snafu};
+use anyhow::Result;
+use thiserror::Error;
 
 use log::{Level, Metadata, Record};
 
-#[derive(Debug, Snafu)]
-pub enum Error<B: core::fmt::Display> {
-  FromBackend { from: B },
-  SetLogger { source: log::SetLoggerError },
+#[derive(Debug, Error)]
+pub enum Error {
+  #[error("backend error: {0}")]
+  FromBackend(#[from] anyhow::Error),
+  #[error("could not set logger: {0}")]
+  SetLogger(#[from] log::SetLoggerError),
+  #[error("no sink provided in init()")]
   NoSink,
-  WriteSink,
+  #[error("error parsing nog level {level}")]
   LevelParseError { level: String },
-}
-
-impl<B: snafu::Error> From<B> for Error<B> {
-  fn from(from: B) -> Self {
-    Error::FromBackend { from }
-  }
 }
 
 struct LoggerInstance {
@@ -109,11 +107,10 @@ impl log::Log for LoggerInstance {
 impl<'a, B: Backend> Frontend for Logger<'a, B> {
   type Backend = B;
   type Intermediate = String;
-  type Error = Error<B::Error>;
 
-  fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
+  fn caller<T>(&mut self, caller: T) -> Result<()>
   where
-    T: Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'static + Send + Sync,
+    T: Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'static + Send + Sync,
   {
     if let Some(level) = self.level {
       log::set_boxed_logger(Box::new(LoggerInstance {
@@ -133,21 +130,21 @@ impl<'a, B: Backend> Frontend for Logger<'a, B> {
           .ok();
         }),
       }))
-      .context(SetLogger {})?;
+      .map_err(Error::SetLogger)?;
       log::set_max_level(level.to_level_filter());
     }
     Ok(())
   }
 
-  fn receive(&self, call: Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> {
-    self.sink.as_ref().context(NoSink)?(
+  fn receive(&self, call: Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> {
+    self.sink.as_ref().ok_or(Error::NoSink)?(
       match call.procedure.as_str() {
         "ERROR" => Level::Error,
         "WARN" => Level::Warn,
         "INFO" => Level::Info,
         "DEBUG" => Level::Debug,
         "TRACE" => Level::Trace,
-        err => return Err(Error::LevelParseError { level: err.to_string() }),
+        err => return Err(Error::LevelParseError { level: err.to_string() }.into()),
       },
       B::deserialize(&call.payload)?,
     );

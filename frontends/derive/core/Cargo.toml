@@ -9,7 +9,7 @@ edition = "2018"
 default = ["std"]
 
 std = [
-  "snafu/std",
+  "thiserror",
   "log/std"
 ]
 
@@ -17,8 +17,8 @@ std = [
 mer = { path = "../../../mer" }
 mer_frontend_derive_macros = { path = "../macros" }
 
-
-snafu = { version = "0.6.9", default-features = false }
+anyhow = "1.0"
+thiserror = { version = "1.0", optional = true }
 log = { version = "0.4", default-features = false }
 
 [dev-dependencies]

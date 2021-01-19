@@ -1,19 +1,20 @@
+use anyhow::Result;
+
 pub trait Backend: Send {
   type Intermediate: serde::Serialize + for<'a> serde::Deserialize<'a>;
-  type Error: snafu::Error + core::fmt::Debug + Send + Sync + 'static;
 
-  fn start(&mut self) -> Result<(), Self::Error>;
-  fn stop(&mut self) -> Result<(), Self::Error>;
+  fn start(&mut self) -> Result<()>;
+  fn stop(&mut self) -> Result<()>;
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
+  fn receiver<T>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static;
+    T: Fn(crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> + Send + Sync + 'static;
 
-  fn call(&mut self, call: crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>, Self::Error>;
+  fn call(&mut self, call: crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>>;
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate, Self::Error>;
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate>;
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T, Self::Error>
+  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
   where
     T: for<'de> serde::Deserialize<'de>;
 }

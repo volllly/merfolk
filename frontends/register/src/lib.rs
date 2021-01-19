@@ -6,28 +6,25 @@ use mer::{
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use snafu::Snafu;
+use anyhow::Result;
+use thiserror::Error;
 
 use log::trace;
 
-#[derive(Debug, Snafu)]
-pub enum Error<B: core::fmt::Display> {
-  FromBackend { from: B },
-  ProcedureNotRegistered {},
-}
-
-impl<B: snafu::Error> From<B> for Error<B> {
-  fn from(from: B) -> Self {
-    Error::FromBackend { from }
-  }
+#[derive(Debug, Error)]
+pub enum Error {
+  #[error("backend error: {0}")]
+  FromBackend(#[from] anyhow::Error),
+  #[error("called procedure is not registered")]
+  ProcedureNotRegistered,
 }
 
 pub struct Register<'a, B: Backend> {
   #[allow(clippy::type_complexity)]
-  procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> + 'a>>>>,
+  procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>>>>,
 
   #[allow(clippy::type_complexity)]
-  call: Option<Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'a + Send>>,
+  call: Option<Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a + Send>>,
 }
 
 unsafe impl<'a, T: Backend> Send for Register<'a, T> {}
@@ -53,7 +50,7 @@ impl RegisterInit {
 }
 
 impl<'a, B: Backend> Register<'a, B> {
-  pub fn register<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(&self, name: &str, procedure: P) -> Result<(), Error<B::Error>>
+  pub fn register<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(&self, name: &str, procedure: P) -> Result<()>
   where
     P: Fn(C) -> R + 'a,
   {
@@ -69,7 +66,7 @@ impl<'a, B: Backend> Register<'a, B> {
     Ok(())
   }
 
-  pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R, Error<B::Error>> {
+  pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R> {
     trace!("call procedure");
 
     Ok(B::deserialize(
@@ -85,11 +82,10 @@ impl<'a, B: Backend> Register<'a, B> {
 impl<'a, B: Backend> Frontend for Register<'a, B> {
   type Backend = B;
   type Intermediate = String;
-  type Error = Error<B::Error>;
 
-  fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
+  fn caller<T>(&mut self, caller: T) -> Result<()>
   where
-    T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>, <Self::Backend as Backend>::Error> + 'a + Send,
+    T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> + 'a + Send,
   {
     trace!("register caller");
 
@@ -98,7 +94,7 @@ impl<'a, B: Backend> Frontend for Register<'a, B> {
   }
 
   #[allow(clippy::type_complexity)]
-  fn receive(&self, call: Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>, Error<<Self::Backend as Backend>::Error>> {
+  fn receive(&self, call: Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> {
     trace!("receive call");
 
     self.procedures.lock().unwrap().get(&call.procedure).unwrap()(call)

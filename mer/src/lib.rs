@@ -12,11 +12,11 @@ mod test;
 
 use core::marker::PhantomData;
 
-use snafu::Snafu;
+use anyhow::Result;
 
 use log::trace;
 
-#[derive(Debug, Snafu)]
+#[derive(Debug)]
 pub enum Error {
   Lock {},
 }
@@ -96,12 +96,12 @@ where
 }
 
 impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
-  pub fn start(&mut self) -> Result<(), B::Error> {
+  pub fn start(&mut self) -> Result<()> {
     trace!("MerInit.start()");
     access!(self.backend).unwrap().start()
   }
 
-  pub fn stop(&mut self) -> Result<(), B::Error> {
+  pub fn stop(&mut self) -> Result<()> {
     trace!("MerInit.stop()");
     access!(self.backend).unwrap().stop()
   }
