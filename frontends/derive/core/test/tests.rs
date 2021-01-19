@@ -53,7 +53,6 @@ fn derive_in_process() {
   assert_eq!(mer_caller.frontend(|f| { f.add(a, b).unwrap() }).unwrap(), a + b);
 }
 
-
 #[test]
 fn derive_http() {
   #[mer_frontend_derive::frontend()]
@@ -79,7 +78,12 @@ fn derive_http() {
   }
 
   let mer_caller = MerInit {
-    backend: mer_backend_http::HttpInit { speak: "http://localhost:8083".parse::<hyper::Uri>().unwrap().into(), ..Default::default() }.init().unwrap(),
+    backend: mer_backend_http::HttpInit {
+      speak: "http://localhost:8083".parse::<hyper::Uri>().unwrap().into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
   }
   .init();

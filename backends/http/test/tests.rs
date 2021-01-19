@@ -41,7 +41,6 @@ fn register_http() {
   assert_eq!(result, a + b);
 }
 
-
 #[test]
 fn register_http_duplex() {
   let register_first = mer_frontend_register::RegisterInit {}.init();

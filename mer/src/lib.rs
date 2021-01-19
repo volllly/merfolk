@@ -27,18 +27,20 @@ pub struct Call<T> {
   pub payload: T,
 }
 unsafe impl<T> Send for Call<T> where T: Send {}
+unsafe impl<T> Sync for Call<T> where T: Sync {}
 
 #[derive(Debug)]
 pub struct Reply<T> {
   pub payload: T,
 }
 unsafe impl<T> Send for Reply<T> where T: Send {}
+unsafe impl<T> Sync for Reply<T> where T: Sync {}
 
 pub struct Mer<'a, B, F>
 where
-  B: interfaces::Backend<'a>,
+  B: interfaces::Backend,
   B: 'a,
-  F: interfaces::Frontend<'a, B>,
+  F: interfaces::Frontend,
   F: 'a,
 {
   _phantom: PhantomData<&'a B>,
@@ -54,8 +56,8 @@ pub struct MerInit<B, F> {
 
 impl<'a, B, F> MerInit<B, F>
 where
-  B: interfaces::Backend<'a> + 'static,
-  F: interfaces::Frontend<'a, B> + 'static,
+  B: interfaces::Backend + 'static,
+  F: interfaces::Frontend<Backend = B> + 'static,
 {
   pub fn init(self) -> Mer<'a, B, F> {
     trace!("MerInit.init()");
@@ -68,7 +70,7 @@ where
 
     access_mut!(backend)
       .unwrap()
-      .receiver(move |call: &Call<&B::Intermediate>| {
+      .receiver(move |call: Call<B::Intermediate>| {
         trace!("Mer.backend.receiver()");
 
         Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
@@ -77,7 +79,7 @@ where
 
     access_mut!(frontend)
       .unwrap()
-      .caller(move |call: &Call<&B::Intermediate>| {
+      .caller(move |call: Call<B::Intermediate>| {
         trace!("Mer.frontend.caller()");
 
         access!(backend_caller).unwrap().call(call)
@@ -93,7 +95,7 @@ where
   }
 }
 
-impl<'a, B: interfaces::Backend<'a>, F: interfaces::Frontend<'a, B>> Mer<'a, B, F> {
+impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
   pub fn start(&mut self) -> Result<(), B::Error> {
     trace!("MerInit.start()");
     access!(self.backend).unwrap().start()

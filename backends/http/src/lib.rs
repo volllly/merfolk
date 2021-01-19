@@ -10,7 +10,7 @@ use hyper::{
 use hyper::http::Uri;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Response, Server};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::{fmt::Debug, net::SocketAddr};
 use tokio::runtime::Runtime;
 use tokio::sync;
@@ -41,7 +41,7 @@ pub struct Http {
   speak: Option<(Uri, Client<HttpConnector<GaiResolver>, Body>)>,
   listen: Option<SocketAddr>,
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>, Error> + Send + Sync>>,
   runtime: Runtime,
 
   shutdown: Option<sync::oneshot::Sender<()>>,
@@ -87,9 +87,9 @@ impl HttpInit {
       speak: match self.speak {
         Some(uri) => match self.client {
           Some(client) => (uri, client).into(),
-          None => (uri, Client::new()).into()
+          None => (uri, Client::new()).into(),
         },
-        None => None
+        None => None,
       },
       listen: self.listen,
       receiver: None,
@@ -103,7 +103,7 @@ impl HttpInit {
   }
 }
 
-impl Backend<'_> for Http {
+impl Backend for Http {
   type Intermediate = String;
   type Error = Error;
 
@@ -162,16 +162,14 @@ impl Backend<'_> for Http {
                 };
 
                 debug!("call Call {{ procedure: {:?}, payload: {:?} }}", &procedure, &body);
-                let reply_mutex = receiver(Arc::new(Mutex::new(crate::Call { procedure, payload: &body })));
-
-                let reply = &*reply_mutex.lock().await;
+                let reply = receiver(crate::Call { procedure, payload: body });
 
                 match reply {
                   Err(e) => Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("{:?}", e))),
 
                   Ok(reply) => {
                     debug!("reply Reply {{ payload: {:?} }}", &reply.payload);
-                    Response::builder().status(StatusCode::OK).body(Body::from(reply.payload.to_owned()))
+                    Response::builder().status(StatusCode::OK).body(Body::from(reply.payload))
                   }
                 }
               }
@@ -197,29 +195,21 @@ impl Backend<'_> for Http {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
-    T: Fn(&Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
+    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
   {
     trace!("register receiver");
 
-    self.receiver = Some(Arc::new(move |call: Arc<Mutex<Call<&String>>>| {
+    self.receiver = Some(Arc::new(move |call: Call<String>| {
       trace!("run receiver");
 
-      let call = match call.as_ref().lock() {
-        Ok(c) => c,
-        Err(_) => return Arc::new(sync::Mutex::new(Err(Error::GetCallLockInReceiver))),
-      };
-
       debug!("calling receiver");
-      match receiver(&*call) {
-        Ok(reply) => Arc::new(sync::Mutex::new(Ok(Reply { payload: reply.payload }))),
-        Err(e) => Arc::new(sync::Mutex::new(Err(e))),
-      }
+      receiver(call)
     }));
 
     Ok(())
   }
 
-  fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
+  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
     trace!("call backend");
 
     debug!("{:?}", &self.speak);

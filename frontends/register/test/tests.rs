@@ -41,7 +41,6 @@ fn register_in_process() {
   assert_eq!(result, a + b);
 }
 
-
 #[test]
 fn register_http() {
   let register_caller = mer_frontend_register::RegisterInit {}.init();
@@ -50,7 +49,12 @@ fn register_http() {
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let mer_caller = MerInit {
-    backend: mer_backend_http::HttpInit { speak: "http://localhost:8082".parse::<hyper::Uri>().unwrap().into(), ..Default::default() }.init().unwrap(),
+    backend: mer_backend_http::HttpInit {
+      speak: "http://localhost:8082".parse::<hyper::Uri>().unwrap().into(),
+      ..Default::default()
+    }
+    .init()
+    .unwrap(),
     frontend: register_caller,
   }
   .init();

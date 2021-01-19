@@ -35,7 +35,7 @@ struct LoggerInstance {
   call: Arc<dyn Fn(&Record) + 'static + Send + Sync>,
 }
 
-pub struct Logger<'a, B: Backend<'a>> {
+pub struct Logger<'a, B: Backend> {
   level: Option<Level>,
   sink: Option<Box<dyn Fn(Level, String)>>,
   ignore_targets: Arc<Option<Vec<&'static str>>>,
@@ -44,7 +44,7 @@ pub struct Logger<'a, B: Backend<'a>> {
   __phantom: std::marker::PhantomData<&'a B>,
 }
 
-unsafe impl<'a, T: Backend<'a>> Send for Logger<'a, T> {}
+unsafe impl<'a, T: Backend> Send for Logger<'a, T> {}
 
 pub struct LoggerInit {
   pub level: Option<Level>,
@@ -65,7 +65,7 @@ impl Default for LoggerInit {
 }
 
 impl LoggerInit {
-  pub fn init<'a, B: Backend<'a>>(self) -> Logger<'a, B> {
+  pub fn init<'a, B: Backend>(self) -> Logger<'a, B> {
     let mut ignore_targets = self.ignore_targets.unwrap_or_default();
 
     ignore_targets.push("mer");
@@ -83,11 +83,18 @@ impl LoggerInit {
 
 impl log::Log for LoggerInstance {
   fn enabled(&self, metadata: &Metadata) -> bool {
-    metadata.level() <= self.level && !metadata.target().is_empty() && if let Some(ignore_targets) = self.ignore_targets.as_ref() {
-      !ignore_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
-    } else { true } && if let Some(allow_targets) = self.allow_targets.as_ref() {
-      allow_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
-    } else { true }
+    metadata.level() <= self.level
+      && !metadata.target().is_empty()
+      && if let Some(ignore_targets) = self.ignore_targets.as_ref() {
+        !ignore_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
+      } else {
+        true
+      }
+      && if let Some(allow_targets) = self.allow_targets.as_ref() {
+        allow_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
+      } else {
+        true
+      }
   }
 
   fn log(&self, record: &Record) {
@@ -99,16 +106,14 @@ impl log::Log for LoggerInstance {
   fn flush(&self) {}
 }
 
-impl<'a, B> Frontend<'a, B> for Logger<'a, B>
-where
-  B: Backend<'a>,
-{
+impl<'a, B: Backend> Frontend for Logger<'a, B> {
+  type Backend = B;
   type Intermediate = String;
   type Error = Error<B::Error>;
 
   fn caller<T>(&mut self, caller: T) -> Result<(), Self::Error>
   where
-    T: Fn(&Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'static + Send + Sync,
+    T: Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, B::Error> + 'static + Send + Sync,
   {
     if let Some(level) = self.level {
       log::set_boxed_logger(Box::new(LoggerInstance {
@@ -121,9 +126,9 @@ where
             Err(err) => B::serialize(&err.to_string()).unwrap(),
           };
 
-          caller(&Call {
+          caller(Call {
             procedure: record.level().to_string(),
-            payload: &args,
+            payload: args,
           })
           .ok();
         }),
@@ -134,7 +139,7 @@ where
     Ok(())
   }
 
-  fn receive(&self, call: &Call<&B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> {
+  fn receive(&self, call: Call<B::Intermediate>) -> Result<Reply<B::Intermediate>, Error<B::Error>> {
     self.sink.as_ref().context(NoSink)?(
       match call.procedure.as_str() {
         "ERROR" => Level::Error,

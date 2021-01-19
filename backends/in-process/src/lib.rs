@@ -2,7 +2,7 @@ use mer::{interfaces::Backend, Call, Reply};
 
 use snafu::{OptionExt, ResultExt, Snafu};
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use tokio::runtime::Runtime;
 
@@ -33,7 +33,7 @@ pub enum Error {
 
 pub struct InProcess {
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Arc<Mutex<Call<&String>>>) -> Arc<tokio::sync::Mutex<Result<Reply<String>, Error>>> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>, Error> + Send + Sync>>,
 
   runtime: Runtime,
 
@@ -69,7 +69,7 @@ impl InProcessInit {
   }
 }
 
-impl<'a> Backend<'a> for InProcess {
+impl Backend for InProcess {
   type Intermediate = String;
   type Error = Error;
 
@@ -87,12 +87,10 @@ impl<'a> Backend<'a> for InProcess {
       loop {
         let (call, tx) = from.lock().await.recv().await.unwrap();
 
-        let reply_mutex = receiver(Arc::new(Mutex::new(Call {
+        let reply = receiver(Call {
           procedure: call.procedure,
-          payload: &call.payload,
-        })));
-
-        let reply = &*reply_mutex.lock().await;
+          payload: call.payload,
+        });
 
         tx.send(match reply {
           Ok(r) => Ok(Reply { payload: r.payload.clone() }),
@@ -120,25 +118,15 @@ impl<'a> Backend<'a> for InProcess {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<(), Self::Error>
   where
-    T: Fn(&Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> + Send + Sync + 'static,
+    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Error> + Send + Sync + 'static,
   {
     trace!("register receiver");
 
-    self.receiver = Some(Arc::new(move |call: Arc<Mutex<Call<&String>>>| {
-      let call = match call.as_ref().lock() {
-        Ok(c) => c,
-        Err(_) => return Arc::new(tokio::sync::Mutex::new(Err(Error::GetCallLockInReceiver {}))),
-      };
-
-      match receiver(&*call) {
-        Ok(reply) => Arc::new(tokio::sync::Mutex::new(Ok(Reply { payload: reply.payload }))),
-        Err(e) => Arc::new(tokio::sync::Mutex::new(Err(e))),
-      }
-    }));
+    self.receiver = Some(Arc::new(move |call: Call<String>| receiver(call)));
     Ok(())
   }
 
-  fn call(&mut self, call: &Call<&Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
+  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>, Self::Error> {
     trace!("receive call");
 
     self.runtime.block_on(async {
