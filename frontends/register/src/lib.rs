@@ -3,8 +3,10 @@ use mer::{
   Call, Reply,
 };
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::{
+  collections::HashMap,
+  sync::{Arc, Mutex},
+};
 
 use anyhow::Result;
 use thiserror::Error;

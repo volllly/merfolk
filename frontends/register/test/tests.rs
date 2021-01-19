@@ -7,8 +7,10 @@ fn add(a: i32, b: i32) -> i32 {
 
 #[test]
 fn register_in_process() {
-  use tokio::sync::mpsc;
-  use tokio::sync::mpsc::{Receiver, Sender};
+  use tokio::sync::{
+    mpsc,
+    mpsc::{Receiver, Sender},
+  };
 
   let register_caller = mer_frontend_register::RegisterInit {}.init();
   let register_receiver = mer_frontend_register::RegisterInit {}.init();

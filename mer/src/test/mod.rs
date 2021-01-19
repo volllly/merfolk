@@ -1,4 +1,7 @@
-use crate::{Mer, MerInit, interfaces::{Backend, Frontend}};
+use crate::{
+  interfaces::{Backend, Frontend},
+  Mer, MerInit,
+};
 
 use crate::{Call, Reply};
 
@@ -67,7 +70,8 @@ fn setup<'a>() -> Mer<'a, MockBackend, MockFrontend> {
   MerInit {
     backend: MockBackend {},
     frontend: MockFrontend {},
-  }.init()
+  }
+  .init()
 }
 
 #[test]
@@ -79,7 +83,6 @@ fn init() {
 fn start() {
   setup().start().unwrap()
 }
-
 
 #[test]
 fn stop() {

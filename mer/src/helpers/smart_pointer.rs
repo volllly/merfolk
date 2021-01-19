@@ -5,14 +5,12 @@ macro_rules! smart_pointer_type {
   }
 }
 
-
 #[allow(unused_macros)]
 macro_rules! smart_pointer {
   ($x:expr) => {
     alloc::sync::Arc::new($x)
   };
 }
-
 
 #[allow(unused_macros)]
 macro_rules! clone_pointer {

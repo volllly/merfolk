@@ -8,13 +8,13 @@ use hyper::{
   Body, Client, Method, Request, StatusCode,
 };
 
-use hyper::http::Uri;
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Response, Server};
-use std::sync::Arc;
-use std::{fmt::Debug, net::SocketAddr};
-use tokio::runtime::Runtime;
-use tokio::sync;
+use hyper::{
+  http::Uri,
+  service::{make_service_fn, service_fn},
+  Response, Server,
+};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
+use tokio::{runtime::Runtime, sync};
 
 use log::{debug, info, trace};
 
