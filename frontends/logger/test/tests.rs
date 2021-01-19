@@ -1,5 +1,4 @@
 use mer::*;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[test]
 fn logger_in_process() {
