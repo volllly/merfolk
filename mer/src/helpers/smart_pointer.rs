@@ -1,4 +1,3 @@
-#[cfg(feature = "threadsafe")]
 #[allow(unused_macros)]
 macro_rules! smart_pointer_type {
   ($x:ty) => {
@@ -6,14 +5,7 @@ macro_rules! smart_pointer_type {
   }
 }
 
-#[cfg(not(feature = "threadsafe"))]
-macro_rules! smart_pointer_type {
-  ($x:ty) => {
-    alloc::rc::Rc<$x>
-  }
-}
 
-#[cfg(feature = "threadsafe")]
 #[allow(unused_macros)]
 macro_rules! smart_pointer {
   ($x:expr) => {
@@ -21,12 +13,6 @@ macro_rules! smart_pointer {
   };
 }
 
-#[cfg(not(feature = "threadsafe"))]
-macro_rules! smart_pointer {
-  ($x:expr) => {
-    alloc::rc::Rc::new($x)
-  };
-}
 
 #[allow(unused_macros)]
 macro_rules! clone_pointer {

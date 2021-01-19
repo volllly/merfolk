@@ -16,6 +16,9 @@ use anyhow::Result;
 
 use log::trace;
 
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
 #[derive(Debug)]
 pub enum Error {
   Lock {},
@@ -68,7 +71,7 @@ where
     let frontend_receiver = clone_lock!(frontend);
     let backend_caller = clone_lock!(backend);
 
-    access_mut!(backend)
+    access!(backend)
       .unwrap()
       .receiver(move |call: Call<B::Intermediate>| {
         trace!("Mer.backend.receiver()");
@@ -77,7 +80,7 @@ where
       }) //TODO: fix error
       .unwrap();
 
-    access_mut!(frontend)
+    access!(frontend)
       .unwrap()
       .caller(move |call: Call<B::Intermediate>| {
         trace!("Mer.frontend.caller()");

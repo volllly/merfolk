@@ -8,13 +8,13 @@ pub trait Backend: Send {
 
   fn receiver<T>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>> + Send + Sync + 'static;
+    T: Fn(crate::Call<<Self as Backend>::Intermediate>) -> Result<crate::Reply<<Self as Backend>::Intermediate>> + Send + Sync + 'static;
 
-  fn call(&mut self, call: crate::Call<Self::Intermediate>) -> Result<crate::Reply<Self::Intermediate>>;
+  fn call(&mut self, call: crate::Call<<Self as Backend>::Intermediate>) -> Result<crate::Reply<<Self as Backend>::Intermediate>>;
 
-  fn serialize<T: serde::Serialize>(from: &T) -> Result<Self::Intermediate>;
+  fn serialize<T: serde::Serialize>(from: &T) -> Result<<Self as Backend>::Intermediate>;
 
-  fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
+  fn deserialize<T>(from: &<Self as Backend>::Intermediate) -> Result<T>
   where
     T: for<'de> serde::Deserialize<'de>;
 }
