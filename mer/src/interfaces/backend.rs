@@ -6,7 +6,7 @@ use alloc::boxed::Box;
 
 #[async_trait::async_trait(?Send)]
 pub trait Backend: Send {
-  type Intermediate: serde::Serialize + for<'a> serde::Deserialize<'a>;
+  type Intermediate: serde::Serialize + for<'a> serde::Deserialize<'a> + Send;
 
   async fn start(&mut self) -> Result<()>;
   async fn stop(&mut self) -> Result<()>;

@@ -10,7 +10,6 @@ use alloc::boxed::Box;
 #[async_trait::async_trait(?Send)]
 pub trait Frontend: Send {
   type Backend: Backend;
-  type Intermediate: serde::Serialize + for<'a> serde::Deserialize<'a>;
 
   fn caller<T, F>(&mut self, caller: T) -> Result<()>
   where

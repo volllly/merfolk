@@ -13,6 +13,9 @@ use thiserror::Error;
 
 use log::trace;
 
+use std::future::Future;
+use std::pin::Pin;
+
 #[derive(Debug, Error)]
 pub enum Error {
   #[error("backend error: {0}")]
@@ -26,7 +29,7 @@ pub struct Register<'a, B: Backend> {
   procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>>>>,
 
   #[allow(clippy::type_complexity)]
-  call: Option<Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a + Send>>,
+  call: Option<Box<dyn Fn(Call<B::Intermediate>) -> Pin<Box<dyn Future<Output = Result<Reply<B::Intermediate>>>>> + 'a + Send>>,
 }
 
 unsafe impl<'a, T: Backend> Send for Register<'a, T> {}
@@ -68,35 +71,46 @@ impl<'a, B: Backend> Register<'a, B> {
     Ok(())
   }
 
-  pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R> {
+  pub async fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R> {
     trace!("call procedure");
 
     Ok(B::deserialize(
-      &self.call.as_ref().unwrap()(Call {
+      &(self.call.as_ref().unwrap()(Call {
         procedure: procedure.to_string(),
         payload: B::serialize(&payload)?,
-      })?
-      .payload,
+      })
+      .await?
+      .payload),
     )?)
   }
 }
 
-impl<'a, B: Backend> Frontend for Register<'a, B> {
+#[async_trait::async_trait(?Send)]
+impl<'a, B: Backend> Frontend for Register<'a, B>
+where
+  B::Intermediate: 'static,
+{
   type Backend = B;
-  type Intermediate = String;
 
-  fn caller<T>(&mut self, caller: T) -> Result<()>
+  fn caller<T, F>(&mut self, caller: T) -> Result<()>
   where
-    T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> + 'a + Send,
+    T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> F + 'static + Send + Sync,
+    F: Future<Output = Result<Reply<<Self::Backend as Backend>::Intermediate>>>,
   {
     trace!("register caller");
 
-    self.call = Some(Box::new(caller));
+    let caller_arc = Arc::new(caller);
+
+    self.call = Some(Box::new(move |call: Call<<Self::Backend as Backend>::Intermediate>| {
+      let caller_inner = Arc::clone(&caller_arc);
+
+      Box::pin(async move { caller_inner(call).await })
+    }));
     Ok(())
   }
 
   #[allow(clippy::type_complexity)]
-  fn receive(&self, call: Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> {
+  async fn receive(&self, call: Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> {
     trace!("receive call");
 
     self.procedures.lock().unwrap().get(&call.procedure).unwrap()(call)

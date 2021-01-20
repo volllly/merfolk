@@ -4,6 +4,8 @@ use anyhow::Result;
 use thiserror::Error;
 
 use std::sync::Arc;
+use std::future::Future;
+use std::pin::Pin;
 
 use tokio::runtime::Runtime;
 
@@ -42,7 +44,7 @@ pub enum Error {
 
 pub struct InProcess {
   #[allow(clippy::type_complexity)]
-  receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
+  receiver: Option<Arc<dyn Fn(Call<String>) -> Pin<Box<dyn Future<Output = Result<Reply<String>>>>> + Send + Sync>>,
 
   runtime: Runtime,
 
@@ -78,10 +80,11 @@ impl InProcessInit {
   }
 }
 
+#[async_trait::async_trait(?Send)]
 impl Backend for InProcess {
   type Intermediate = String;
 
-  fn start(&mut self) -> Result<()> {
+  async fn start(&mut self) -> Result<()> {
     trace!("start InProcessInit");
 
     if self.handle.is_some() {
@@ -98,7 +101,7 @@ impl Backend for InProcess {
         let reply = receiver(Call {
           procedure: call.procedure,
           payload: call.payload,
-        });
+        }).await;
 
         tx.send(reply).await.unwrap();
       }
@@ -107,7 +110,7 @@ impl Backend for InProcess {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<()> {
+  async fn stop(&mut self) -> Result<()> {
     trace!("stop InProcessInit");
 
     match &self.handle {
@@ -119,17 +122,26 @@ impl Backend for InProcess {
     }
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn receiver<T, F>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,
+    T: Fn(Call<Self::Intermediate>) -> F + Send + Sync + 'static,
+    F: Future<Output = Result<Reply<Self::Intermediate>>>
   {
     trace!("register receiver");
 
-    self.receiver = Some(Arc::new(move |call: Call<String>| receiver(call)));
+    let receiver_arc = Arc::new(receiver);
+
+    self.receiver = Some(Arc::new(move |call: Call<String>| {
+      let receiver_inner = Arc::clone(&receiver_arc);
+      Box::pin(async move {
+        receiver_inner(call).await
+      })
+    }));
+
     Ok(())
   }
 
-  fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> {
+  async fn call(&mut self, call: Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> {
     trace!("receive call");
 
     self.runtime.block_on(async {
@@ -171,6 +183,6 @@ impl Backend for InProcess {
 
 impl Drop for InProcess {
   fn drop(&mut self) {
-    self.stop().unwrap()
+    self.stop().await.unwrap()
   }
 }
