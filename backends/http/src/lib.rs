@@ -205,7 +205,7 @@ impl Backend for Http {
     self.shutdown.take().ok_or(Error::NotStarted)?.send(()).map_err(|_| Error::Shutdown.into())
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn register<T>(&mut self, receiver: T) -> Result<()>
   where
     T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,
   {

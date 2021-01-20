@@ -1,0 +1,29 @@
+[package]
+name = "mer_middleware_authentication"
+version = "0.1.0"
+authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
+edition = "2018"
+
+[features]
+
+[dependencies]
+mer = { path = "../../mer" }
+
+serde = { version = "1.0.116", features=["derive"] }
+
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+wildmatch = "1.0"
+
+[dev-dependencies]
+mer_frontend_register = { path = "../../frontends/register" }
+mer_backend_in_process = { path = "../../backends/in-process" }
+
+rand = "0.8"
+flexi_logger = "0.17"
+tokio = "1.0"
+
+[[test]]
+name = "test"
+path = "test/tests.rs"

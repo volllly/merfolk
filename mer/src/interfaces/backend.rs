@@ -6,7 +6,7 @@ pub trait Backend: Send {
   fn start(&mut self) -> Result<()>;
   fn stop(&mut self) -> Result<()>;
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn register<T>(&mut self, receiver: T) -> Result<()>
   where
     T: Fn(crate::Call<<Self as Backend>::Intermediate>) -> Result<crate::Reply<<Self as Backend>::Intermediate>> + Send + Sync + 'static;
 

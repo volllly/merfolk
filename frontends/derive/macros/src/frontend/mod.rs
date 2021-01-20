@@ -221,9 +221,8 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
 
     impl #impl_generic_def mer::interfaces::Frontend for #struct_name #impl_generics #where_clause {
       type Backend = __B;
-      type Intermediate = String;
 
-      fn caller<__T>(&mut self, caller: __T) -> anyhow::Result<()>
+      fn register<__T>(&mut self, caller: __T) -> anyhow::Result<()>
       where
         __T: Fn(mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> + '__a + Send,
       {

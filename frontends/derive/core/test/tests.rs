@@ -33,6 +33,7 @@ fn derive_in_process() {
   let mer_caller = MerInit {
     backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
+    middlewares: None
   }
   .init();
 
@@ -44,6 +45,7 @@ fn derive_in_process() {
     .init()
     .unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
+    middlewares: None
   }
   .init();
 
@@ -85,6 +87,7 @@ fn derive_http() {
     .init()
     .unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
+    middlewares: None
   }
   .init();
 
@@ -96,6 +99,7 @@ fn derive_http() {
     .init()
     .unwrap(),
     frontend: DataInit::<i32> { offset: 32 }.init(),
+    middlewares: None
   }
   .init();
 

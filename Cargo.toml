@@ -5,6 +5,7 @@ members = [
   "frontends/derive/macros",
   "frontends/register",
   "frontends/logger",
+  "middlewares/authentication",
   "backends/http",
   "backends/in-process"
 ]

@@ -22,6 +22,7 @@ use alloc::string::String;
 #[derive(Debug)]
 pub enum Error {
   Lock {},
+  MiddlewareWrappingError
 }
 
 #[derive(Debug)]
@@ -50,11 +51,13 @@ where
 
   backend: smart_lock_type!(B),
   frontend: smart_lock_type!(F),
+  //middlewares: smart_lock_type!(Vec<Box<dyn interfaces::Middleware<Backend = B>>>)
 }
 
 pub struct MerInit<B, F> {
   pub backend: B,
   pub frontend: F,
+  pub middlewares: Option<Vec<Box<dyn interfaces::Middleware<Backend = B>>>>
 }
 
 impl<'a, B, F> MerInit<B, F>
@@ -67,25 +70,44 @@ where
 
     let backend = smart_lock!(self.backend);
     let frontend = smart_lock!(self.frontend);
+    let middlewares = smart_lock!(self.middlewares.unwrap_or_default());
 
-    let frontend_receiver = clone_lock!(frontend);
-    let backend_caller = clone_lock!(backend);
+    let frontend_backend = clone_lock!(frontend);
+    let middlewares_backend = clone_lock!(middlewares);
+
+    let backend_frontend = clone_lock!(backend);
+    let middlewares_frontend = clone_lock!(middlewares);
 
     access!(backend)
       .unwrap()
-      .receiver(move |call: Call<B::Intermediate>| {
-        trace!("Mer.backend.receiver()");
+      .register(move |call: Call<B::Intermediate>| {
+        trace!("Mer.backend.register()");
+        let middlewares_inner = access!(middlewares_backend).unwrap();
+        let unwrapped = middlewares_inner.iter().fold(Ok(call), |acc, m| m.unwrap_call(acc));
 
-        Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
+        let reply = match unwrapped {
+          Ok(unwrapped_ok) => access!(frontend_backend).unwrap().receive(unwrapped_ok),
+          Err(err) => Err(err)
+        };
+
+        middlewares_inner.iter().fold(reply, |acc, m| m.wrap_reply(acc))
       }) //TODO: fix error
       .unwrap();
 
     access!(frontend)
       .unwrap()
-      .caller(move |call: Call<B::Intermediate>| {
-        trace!("Mer.frontend.caller()");
+      .register(move |call: Call<B::Intermediate>| {
+        trace!("Mer.frontend.register()");
+        let middlewares_inner = access!(middlewares_frontend).unwrap();
 
-        access!(backend_caller).unwrap().call(call)
+        let wrapped = middlewares_inner.iter().rev().fold(Ok(call), |acc, m| m.wrap_call(acc));
+
+        let reply = match wrapped {
+          Ok(wrapped_ok) => access!(backend_frontend).unwrap().call(wrapped_ok),
+          Err(err) => Err(err)
+        };
+
+        middlewares_inner.iter().fold(reply, |acc, m| m.unwrap_reply(acc))
       })
       .unwrap();
 
@@ -94,6 +116,7 @@ where
 
       backend: clone_lock!(backend),
       frontend: clone_lock!(frontend),
+      //middlewares
     }
   }
 }

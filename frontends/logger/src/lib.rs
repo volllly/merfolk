@@ -106,9 +106,8 @@ impl log::Log for LoggerInstance {
 
 impl<'a, B: Backend> Frontend for Logger<'a, B> {
   type Backend = B;
-  type Intermediate = String;
 
-  fn caller<T>(&mut self, caller: T) -> Result<()>
+  fn register<T>(&mut self, caller: T) -> Result<()>
   where
     T: Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'static + Send + Sync,
   {

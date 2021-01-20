@@ -19,7 +19,7 @@ impl Backend for MockBackend {
     Ok(())
   }
 
-  fn receiver<T>(&mut self, _receiver: T) -> Result<()>
+  fn register<T>(&mut self, _receiver: T) -> Result<()>
   where
     T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,
   {
@@ -46,9 +46,8 @@ struct MockFrontend {}
 
 impl Frontend for MockFrontend {
   type Backend = MockBackend;
-  type Intermediate = String;
 
-  fn caller<T>(&mut self, _caller: T) -> Result<()>
+  fn register<T>(&mut self, _caller: T) -> Result<()>
   where
     T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> + Send + Sync + 'static,
   {
@@ -70,6 +69,7 @@ fn setup<'a>() -> Mer<'a, MockBackend, MockFrontend> {
   MerInit {
     backend: MockBackend {},
     frontend: MockFrontend {},
+    middlewares: None
   }
   .init()
 }

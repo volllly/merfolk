@@ -22,6 +22,7 @@ fn register_in_process() {
   let mer_caller = MerInit {
     backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
     frontend: register_caller,
+    middlewares: None
   }
   .init();
 
@@ -33,6 +34,7 @@ fn register_in_process() {
     .init()
     .unwrap(),
     frontend: register_receiver,
+    middlewares: None
   }
   .init();
 
@@ -58,6 +60,7 @@ fn register_http() {
     .init()
     .unwrap(),
     frontend: register_caller,
+    middlewares: None
   }
   .init();
 
@@ -69,6 +72,7 @@ fn register_http() {
     .init()
     .unwrap(),
     frontend: register_receiver,
+    middlewares: None
   }
   .init();
 

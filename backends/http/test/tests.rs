@@ -20,6 +20,7 @@ fn register_http() {
     .init()
     .unwrap(),
     frontend: register_caller,
+    middlewares: None
   }
   .init();
 
@@ -31,6 +32,7 @@ fn register_http() {
     .init()
     .unwrap(),
     frontend: register_receiver,
+    middlewares: None
   }
   .init();
 
@@ -58,6 +60,7 @@ fn register_http_duplex() {
     .init()
     .unwrap(),
     frontend: register_first,
+    middlewares: None
   }
   .init();
 
@@ -70,6 +73,7 @@ fn register_http_duplex() {
     .init()
     .unwrap(),
     frontend: register_second,
+    middlewares: None
   }
   .init();
 

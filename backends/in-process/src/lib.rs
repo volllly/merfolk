@@ -119,7 +119,7 @@ impl Backend for InProcess {
     }
   }
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn register<T>(&mut self, receiver: T) -> Result<()>
   where
     T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,
   {

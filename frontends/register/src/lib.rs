@@ -83,9 +83,8 @@ impl<'a, B: Backend> Register<'a, B> {
 
 impl<'a, B: Backend> Frontend for Register<'a, B> {
   type Backend = B;
-  type Intermediate = String;
 
-  fn caller<T>(&mut self, caller: T) -> Result<()>
+  fn register<T>(&mut self, caller: T) -> Result<()>
   where
     T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> + 'a + Send,
   {
