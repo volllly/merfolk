@@ -1,16 +1,22 @@
 use anyhow::Result;
 
+use core::future::Future;
+#[cfg(not(feature = "std"))]
+use alloc::boxed::Box;
+
+#[async_trait::async_trait(?Send)]
 pub trait Backend: Send {
   type Intermediate: serde::Serialize + for<'a> serde::Deserialize<'a>;
 
-  fn start(&mut self) -> Result<()>;
-  fn stop(&mut self) -> Result<()>;
+  async fn start(&mut self) -> Result<()>;
+  async fn stop(&mut self) -> Result<()>;
 
-  fn receiver<T>(&mut self, receiver: T) -> Result<()>
+  fn receiver<T, F>(&mut self, receiver: T) -> Result<()>
   where
-    T: Fn(crate::Call<<Self as Backend>::Intermediate>) -> Result<crate::Reply<<Self as Backend>::Intermediate>> + Send + Sync + 'static;
+    T: Fn(crate::Call<<Self as Backend>::Intermediate>) -> F + Send + Sync + 'static,
+    F: Future<Output = Result<crate::Reply<<Self as Backend>::Intermediate>>>;
 
-  fn call(&mut self, call: crate::Call<<Self as Backend>::Intermediate>) -> Result<crate::Reply<<Self as Backend>::Intermediate>>;
+  async fn call(&mut self, call: crate::Call<<Self as Backend>::Intermediate>) -> Result<crate::Reply<<Self as Backend>::Intermediate>>;
 
   fn serialize<T: serde::Serialize>(from: &T) -> Result<<Self as Backend>::Intermediate>;
 

@@ -62,7 +62,7 @@ where
   B: interfaces::Backend + 'static,
   F: interfaces::Frontend<Backend = B> + 'static,
 {
-  pub fn init(self) -> Mer<'a, B, F> {
+  pub async fn init(self) -> Mer<'a, B, F> {
     trace!("MerInit.init()");
 
     let backend = smart_lock!(self.backend);
@@ -72,20 +72,27 @@ where
     let backend_caller = clone_lock!(backend);
 
     access!(backend)
-      .unwrap()
+      .await
       .receiver(move |call: Call<B::Intermediate>| {
-        trace!("Mer.backend.receiver()");
+        let frontend_receiver = clone_lock!(frontend_receiver);
+        async move {
+          trace!("Mer.backend.receiver()");
 
-        Ok(access!(frontend_receiver).unwrap().receive(call).unwrap())
+          access!(frontend_receiver).await.receive(call).await
+        }
       }) //TODO: fix error
       .unwrap();
 
     access!(frontend)
-      .unwrap()
+      .await
       .caller(move |call: Call<B::Intermediate>| {
-        trace!("Mer.frontend.caller()");
+        let backend_caller = clone_lock!(backend_caller);
 
-        access!(backend_caller).unwrap().call(call)
+        async move {
+          trace!("Mer.frontend.caller()");
+
+          access!(backend_caller).await.call(call).await
+        }
       })
       .unwrap();
 
@@ -99,35 +106,29 @@ where
 }
 
 impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
-  pub fn start(&mut self) -> Result<()> {
+  pub async fn start(&mut self) -> Result<()> {
     trace!("MerInit.start()");
-    access!(self.backend).unwrap().start()
+    access!(self.backend).await.start().await
   }
 
-  pub fn stop(&mut self) -> Result<()> {
+  pub async fn stop(&mut self) -> Result<()> {
     trace!("MerInit.stop()");
-    access!(self.backend).unwrap().stop()
+    access!(self.backend).await.stop().await
   }
 
-  pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>
+  pub async fn frontend<T, R>(&self, access: T) -> Result<R, Error>
   where
     T: Fn(&F) -> R,
   {
     trace!("MerInit.frontend()");
-    Ok(access(&*match access!(self.frontend) {
-      Ok(frontend) => frontend,
-      Err(_) => return Err(Error::Lock {}),
-    }))
+    Ok(access(&*access!(self.frontend).await))
   }
 
-  pub fn backend<T, R>(&self, access: T) -> Result<R, Error>
+  pub async fn backend<T, R>(&self, access: T) -> Result<R, Error>
   where
     T: Fn(&B) -> R,
   {
     trace!("MerInit.backend()");
-    Ok(access(&*match access!(self.backend) {
-      Ok(backend) => backend,
-      Err(_) => return Err(Error::Lock {}),
-    }))
+    Ok(access(&*access!(self.backend).await))
   }
 }
