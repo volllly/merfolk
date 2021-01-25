@@ -69,7 +69,7 @@ fn setup<'a>() -> Mer<'a, MockBackend, MockFrontend> {
   MerInit {
     backend: MockBackend {},
     frontend: MockFrontend {},
-    middlewares: None
+    middlewares: None,
   }
   .init()
 }

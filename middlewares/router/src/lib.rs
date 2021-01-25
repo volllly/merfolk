@@ -13,7 +13,7 @@ use regex::Regex;
 #[derive(Debug, Error)]
 pub enum Error {
   #[error("could not parse regex: {0}")]
-  RegexParse(#[from] regex::Error)
+  RegexParse(#[from] regex::Error),
 }
 
 pub struct Router<B> {

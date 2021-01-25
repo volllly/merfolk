@@ -22,7 +22,7 @@ use alloc::string::String;
 #[derive(Debug)]
 pub enum Error {
   Lock {},
-  MiddlewareWrappingError
+  MiddlewareWrappingError,
 }
 
 #[derive(Debug)]
@@ -57,7 +57,7 @@ where
 pub struct MerInit<B, F> {
   pub backend: B,
   pub frontend: F,
-  pub middlewares: Option<Vec<Box<dyn interfaces::Middleware<Backend = B>>>>
+  pub middlewares: Option<Vec<Box<dyn interfaces::Middleware<Backend = B>>>>,
 }
 
 impl<'a, B, F> MerInit<B, F>
@@ -87,7 +87,7 @@ where
 
         let reply = match unwrapped {
           Ok(unwrapped_ok) => access!(frontend_backend).unwrap().receive(unwrapped_ok),
-          Err(err) => Err(err)
+          Err(err) => Err(err),
         };
 
         middlewares_inner.iter().fold(reply, |acc, m| m.wrap_reply(acc))
@@ -104,7 +104,7 @@ where
 
         let reply = match wrapped {
           Ok(wrapped_ok) => access!(backend_frontend).unwrap().call(wrapped_ok),
-          Err(err) => Err(err)
+          Err(err) => Err(err),
         };
 
         middlewares_inner.iter().fold(reply, |acc, m| m.unwrap_reply(acc))

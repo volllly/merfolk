@@ -32,7 +32,7 @@ pub struct Authentication<'a, B> {
   __phantom: PhantomData<B>,
 
   scopes: Option<Vec<(String, String)>>,
-  
+
   #[allow(clippy::type_complexity)]
   authenticator: Option<Box<dyn Fn((String, String), Vec<String>) -> Result<()> + 'a + Send>>,
 
@@ -101,15 +101,11 @@ impl<'a, B: Backend> Middleware for Authentication<'a, B> {
       let mut scope: Vec<String> = vec![];
 
       if let Some(scopes) = &self.scopes {
-        scopes
-          .iter()
-          .for_each(
-            |s| {
-              if WildMatch::new(&s.0).is_match(call.procedure.as_str()) {
-                scope.push(s.1.to_string())
-              };
-            },
-          );
+        scopes.iter().for_each(|s| {
+          if WildMatch::new(&s.0).is_match(call.procedure.as_str()) {
+            scope.push(s.1.to_string())
+          };
+        });
       }
 
       let intermediate: Intermediate<B> = B::deserialize(&call.payload)?;

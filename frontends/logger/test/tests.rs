@@ -19,7 +19,7 @@ fn logger_in_process() {
     .init()
     .unwrap(),
     frontend: logger_receiver,
-    middlewares: None
+    middlewares: None,
   }
   .init();
 
@@ -35,7 +35,7 @@ fn logger_in_process() {
   let _mer_caller = MerInit {
     backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
     frontend: logger_caller,
-    middlewares: None
+    middlewares: None,
   }
   .init();
 

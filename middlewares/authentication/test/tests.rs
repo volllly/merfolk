@@ -29,7 +29,8 @@ fn authentication_register_in_process() {
     middlewares: Some(vec![mer_middleware_authentication::AuthenticationInit {
       auth: (auth.0, auth.1),
       ..Default::default()
-    }.init_boxed()])
+    }
+    .init_boxed()]),
   }
   .init();
 
@@ -51,7 +52,8 @@ fn authentication_register_in_process() {
         }
       })),
       ..Default::default()
-    }.init_boxed()])
+    }
+    .init_boxed()]),
   }
   .init();
 
@@ -61,8 +63,6 @@ fn authentication_register_in_process() {
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
   assert_eq!(result, a + b);
 }
-
-
 
 #[test]
 #[should_panic]
@@ -88,7 +88,8 @@ fn authentication_register_in_process_failing() {
     middlewares: Some(vec![mer_middleware_authentication::AuthenticationInit {
       auth: (auth.0, auth.1),
       ..Default::default()
-    }.init_boxed()])
+    }
+    .init_boxed()]),
   }
   .init();
 
@@ -110,7 +111,8 @@ fn authentication_register_in_process_failing() {
         }
       })),
       ..Default::default()
-    }.init_boxed()])
+    }
+    .init_boxed()]),
   }
   .init();
 
