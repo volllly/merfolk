@@ -1,0 +1,28 @@
+[package]
+name = "mer_middleware_router"
+version = "0.1.0"
+authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
+edition = "2018"
+
+[features]
+
+[dependencies]
+mer = { path = "../../mer" }
+
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+regex = "1"
+
+[dev-dependencies]
+mer_frontend_register = { path = "../../frontends/register" }
+mer_backend_in_process = { path = "../../backends/in-process" }
+mer_middleware_authentication = { path = "../../middlewares/authentication" }
+
+rand = "0.8"
+flexi_logger = "0.17"
+tokio = "1.0"
+
+[[test]]
+name = "test"
+path = "test/tests.rs"
