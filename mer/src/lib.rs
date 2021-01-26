@@ -1,3 +1,10 @@
+#![doc(issue_tracker_base_url = "https://github.com/volllly/mer/issues/")]
+#![doc(html_root_url = "https://github.com/volllly/mer")]
+#![doc(test(no_crate_inject))]
+
+//#[doc(include = "../README.md")]
+//#[doc = include_str!("../../README.md")]
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -51,7 +58,6 @@ where
 
   backend: smart_lock_type!(B),
   frontend: smart_lock_type!(F),
-  //middlewares: smart_lock_type!(Vec<Box<dyn interfaces::Middleware<Backend = B>>>)
 }
 
 pub struct MerInit<B, F> {
