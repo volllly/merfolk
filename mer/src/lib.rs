@@ -1,10 +1,8 @@
 #![doc(issue_tracker_base_url = "https://github.com/volllly/mer/issues/")]
 #![doc(html_root_url = "https://github.com/volllly/mer")]
 #![doc(test(no_crate_inject))]
-
 //#[doc(include = "../README.md")]
 //#[doc = include_str!("../../README.md")]
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -27,12 +25,14 @@ use log::trace;
 use alloc::string::String;
 
 #[derive(Debug)]
+#[cfg_attr(any(feature = "c_ffi", feature = "cpp_ffi"), repr(C))]
 pub enum Error {
   Lock {},
   MiddlewareWrappingError,
 }
 
 #[derive(Debug)]
+#[cfg_attr(any(feature = "c_ffi", feature = "cpp_ffi"), repr(C))]
 pub struct Call<T> {
   pub procedure: String,
   pub payload: T,
@@ -41,12 +41,14 @@ unsafe impl<T> Send for Call<T> where T: Send {}
 unsafe impl<T> Sync for Call<T> where T: Sync {}
 
 #[derive(Debug)]
+#[cfg_attr(any(feature = "c_ffi", feature = "cpp_ffi"), repr(C))]
 pub struct Reply<T> {
   pub payload: T,
 }
 unsafe impl<T> Send for Reply<T> where T: Send {}
 unsafe impl<T> Sync for Reply<T> where T: Sync {}
 
+#[cfg_attr(any(feature = "c_ffi", feature = "cpp_ffi"), repr(C))]
 pub struct Mer<'a, B, F>
 where
   B: interfaces::Backend,
@@ -60,6 +62,7 @@ where
   frontend: smart_lock_type!(F),
 }
 
+#[cfg_attr(any(feature = "c_ffi", feature = "cpp_ffi"), repr(C))]
 pub struct MerInit<B, F> {
   pub backend: B,
   pub frontend: F,
@@ -71,6 +74,7 @@ where
   B: interfaces::Backend + 'static,
   F: interfaces::Frontend<Backend = B> + 'static,
 {
+  #[cfg_attr(any(feature = "c_ffi", feature = "cpp_ffi"), no_mangle, derive_macros::extern_keyword)]
   pub fn init(self) -> Mer<'a, B, F> {
     trace!("MerInit.init()");
 
@@ -159,4 +163,16 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
       Err(_) => return Err(Error::Lock {}),
     }))
   }
+}
+
+#[cfg(any(feature = "c_ffi", feature = "cpp_ffi"))]
+#[no_mangle]
+pub extern "C" fn start<'a, B, F>(this: &mut Mer<'a, B, F>) -> bool
+where
+  B: interfaces::Backend,
+  B: 'a,
+  F: interfaces::Frontend,
+  F: 'a,
+{
+  helpers::result_as_bool(this.start())
 }

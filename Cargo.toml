@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "mer",
+  "derive_macros",
   "frontends/derive/core",
   "frontends/derive/macros",
   "frontends/register",

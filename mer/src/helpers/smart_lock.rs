@@ -1,3 +1,5 @@
+#![allow(unused_macros)]
+
 #[cfg(feature = "std")]
 macro_rules! smart_lock_type {
   ($x:ty) => {
