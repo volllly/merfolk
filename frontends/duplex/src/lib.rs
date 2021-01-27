@@ -16,7 +16,7 @@ pub enum Error {
   FromBackend(#[from] anyhow::Error),
 }
 
-pub struct Split<'a, B, FC, FR>
+pub struct Duplex<'a, B, FC, FR>
 where
   B: Backend + 'a,
   FC: Frontend<Backend = B> + 'a,
@@ -27,7 +27,7 @@ where
   pub receiver: FR,
 }
 
-unsafe impl<'a, B, FC, FR> Send for Split<'a, B, FC, FR>
+unsafe impl<'a, B, FC, FR> Send for Duplex<'a, B, FC, FR>
 where
   B: Backend,
   FC: Frontend<Backend = B>,
@@ -35,7 +35,7 @@ where
 {
 }
 
-pub struct SplitInit<B, FC, FR>
+pub struct DuplexInit<B, FC, FR>
 where
   B: Backend,
   FC: Frontend<Backend = B>,
@@ -45,16 +45,16 @@ where
   pub receiver: FR,
 }
 
-impl<'a, B, FC, FR> SplitInit<B, FC, FR>
+impl<'a, B, FC, FR> DuplexInit<B, FC, FR>
 where
   B: Backend,
   FC: Frontend<Backend = B>,
   FR: Frontend<Backend = B>,
 {
-  pub fn init(self) -> Split<'a, B, FC, FR> {
-    trace!("initialize split");
+  pub fn init(self) -> Duplex<'a, B, FC, FR> {
+    trace!("initialize duplex");
 
-    Split {
+    Duplex {
       __phantom: PhantomData,
 
       caller: self.caller,
@@ -63,7 +63,7 @@ where
   }
 }
 
-impl<'a, B, FC, FR> Frontend for Split<'a, B, FC, FR>
+impl<'a, B, FC, FR> Frontend for Duplex<'a, B, FC, FR>
 where
   B: Backend,
   FC: Frontend<Backend = B>,
@@ -75,7 +75,7 @@ where
   where
     T: Fn(Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> + 'static + Send + Sync,
   {
-    trace!("split caller");
+    trace!("duplex caller");
 
     self.caller.register(caller)
   }

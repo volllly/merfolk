@@ -6,7 +6,7 @@ members = [
   "frontends/derive/macros",
   "frontends/register",
   "frontends/logger",
-  "frontends/split",
+  "frontends/duplex",
 
   "middlewares/router",
   "middlewares/authentication",

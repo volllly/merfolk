@@ -9,7 +9,7 @@ fn sub(a: i32, b: i32) -> i32 {
 }
 
 #[test]
-fn split_in_process_duplex() {
+fn duplex_in_process_duplex() {
   use tokio::sync::{
     mpsc,
     mpsc::{Receiver, Sender},
@@ -37,7 +37,7 @@ fn split_in_process_duplex() {
     }
     .init()
     .unwrap(),
-    frontend: mer_frontend_split::SplitInit {
+    frontend: mer_frontend_duplex::DuplexInit {
       caller: register_first_caller,
       receiver: register_first_receiver,
     }
@@ -53,7 +53,7 @@ fn split_in_process_duplex() {
     }
     .init()
     .unwrap(),
-    frontend: mer_frontend_split::SplitInit {
+    frontend: mer_frontend_duplex::DuplexInit {
       caller: register_second_caller,
       receiver: register_second_receiver,
     }
