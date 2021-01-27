@@ -28,7 +28,6 @@ mer_backend_http = { path = "../../../backends/http" }
 hyper = "0.14"
 serde = "1.0"
 rand = "0.8"
-flexi_logger = "0.17"
 tokio = { version = "1.0", features = ["sync"] }
 
 [[test]]

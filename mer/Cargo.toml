@@ -13,12 +13,13 @@ std = ["serde/std", "anyhow/std"]
 [dependencies]
 serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
 
-spin = "0.7.0"
 
 anyhow = { version = "1.0", default-features = false }
 log = { version = "0.4", default-features = false }
 
+[target.'cfg(not(feature = "std"))'.dependencies]
+spin = "0.7.0"
+
 [dev-dependencies]
 serde_json = "1.0.57"
 rand = "0.8"
-flexi_logger = "0.17"

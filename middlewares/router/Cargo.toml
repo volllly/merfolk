@@ -20,7 +20,6 @@ mer_backend_in_process = { path = "../../backends/in-process" }
 mer_middleware_authentication = { path = "../../middlewares/authentication" }
 
 rand = "0.8"
-flexi_logger = "0.17"
 tokio = "1.0"
 
 [[test]]
