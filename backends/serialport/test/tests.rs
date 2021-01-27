@@ -168,7 +168,6 @@ fn register_serialport() {
   let mut mer_caller = MerInit {
     backend: mer_backend_serialport::SerialPortInit {
       port: Box::new(port_caller),
-      poll_intervall: None,
     }
     .init()
     .unwrap(),
@@ -180,7 +179,6 @@ fn register_serialport() {
   let mut mer_receiver = MerInit {
     backend: mer_backend_serialport::SerialPortInit {
       port: Box::new(port_receiver),
-      poll_intervall: None,
     }
     .init()
     .unwrap(),

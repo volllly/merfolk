@@ -33,7 +33,6 @@ pub enum Error {
 
 pub struct SerialPort {
   port: Arc<Mutex<Box<dyn serialport::SerialPort>>>,
-  poll_intervall: std::time::Duration,
 
   #[allow(clippy::type_complexity)]
   receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
@@ -47,7 +46,6 @@ pub struct SerialPort {
 
 pub struct SerialPortInit {
   pub port: Box<dyn serialport::SerialPort>,
-  pub poll_intervall: Option<std::time::Duration>,
 }
 
 impl From<SerialPortInit> for Result<SerialPort> {
@@ -64,7 +62,6 @@ impl SerialPortInit {
 
     Ok(SerialPort {
       port: Arc::new(Mutex::new(self.port)),
-      poll_intervall: self.poll_intervall.unwrap_or_else(|| std::time::Duration::from_millis(100)),
       receiver: None,
       reply_queue: None,
       handle: None,
@@ -102,13 +99,11 @@ impl Backend for SerialPort {
 
     let port = Arc::clone(&self.port);
 
-    let poll_intervall = self.poll_intervall;
-
     self.handle = Some(self.runtime.spawn(async move {
       trace!("spawn listener");
 
       loop {
-        trace!("polling serialport");
+        trace!("reading serialport");
 
         let mut read: Vec<u8> = vec![];
 
@@ -128,7 +123,6 @@ impl Backend for SerialPort {
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
               debug!("{} read timeout", port_gate.name().unwrap_or_else(|| "".to_string()));
-              tokio::time::sleep(poll_intervall).await;
               break;
             }
             Err(e) => {
@@ -185,7 +179,6 @@ impl Backend for SerialPort {
             }
           };
         }
-        tokio::time::sleep(poll_intervall).await;
       }
     }));
     Ok(())
