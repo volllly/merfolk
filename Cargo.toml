@@ -8,5 +8,6 @@ members = [
   "middlewares/router",
   "middlewares/authentication",
   "backends/http",
+  "backends/serialport",
   "backends/in-process"
 ]
