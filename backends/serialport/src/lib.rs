@@ -13,7 +13,7 @@ use log::{debug, error, info, trace};
 pub enum Error {
   #[error("serializing failed: {0}")]
   Serialize(#[source] serde_json::Error),
-  #[error("deserializing failed {0}")]
+  #[error("deserializing failed: {0}")]
   Deserialize(#[source] serde_json::Error),
   #[error("no receiver was degistered by init()")]
   NoReceiver,
@@ -27,6 +27,8 @@ pub enum Error {
   SendError(#[source] std::io::Error),
   #[error("no sender channel still alive")]
   NoSenderChannel,
+  #[error("from frontend: {0}")]
+  FromFrontend(#[source] anyhow::Error),
 }
 
 pub struct SerialPort {
@@ -57,6 +59,8 @@ impl From<SerialPortInit> for Result<SerialPort> {
 impl SerialPortInit {
   pub fn init(self) -> Result<SerialPort> {
     trace!("initialize SerialPortInit");
+
+    debug!("port: {:?}", self.port.name());
 
     Ok(SerialPort {
       port: Arc::new(Mutex::new(self.port)),
@@ -110,15 +114,12 @@ impl Backend for SerialPort {
 
         let mut port_gate = port.lock().await;
 
-        port_gate.write_request_to_send(true).ok();
-        port_gate.write_data_terminal_ready(true).ok();
-
         loop {
           let mut buf: Vec<u8> = vec![0; 1024];
 
           match port_gate.read(buf.as_mut_slice()) {
             Ok(n) => {
-              debug!("read {} bytes", n);
+              debug!("{} read {} bytes", port_gate.name().unwrap_or_else(|| "".to_string()), n);
               read.append(&mut buf[0..n].to_vec());
 
               if n != buf.len() {
@@ -126,7 +127,7 @@ impl Backend for SerialPort {
               }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
-              debug!("read timeout");
+              debug!("{} read timeout", port_gate.name().unwrap_or_else(|| "".to_string()));
               tokio::time::sleep(poll_intervall).await;
               break;
             }
@@ -136,9 +137,6 @@ impl Backend for SerialPort {
             }
           }
         }
-
-        port_gate.write_request_to_send(false).ok();
-        port_gate.write_data_terminal_ready(false).ok();
 
         if !read.is_empty() {
           if let Ok(read_string) = String::from_utf8(read) {
@@ -151,12 +149,13 @@ impl Backend for SerialPort {
 
               match &part[0..2] {
                 "r:" => {
-                  debug!("read reply");
+                  debug!("{} read reply", port_gate.name().unwrap_or_else(|| "".to_string()));
 
                   tx.send(part[2..].to_string()).await.unwrap()
                 }
                 "c:" => {
-                  debug!("read call");
+                  debug!("{} read call", port_gate.name().unwrap_or_else(|| "".to_string()));
+
                   let read_unpacked = part[2..].to_string();
                   let self_call: SelfCall = Self::deserialize(&read_unpacked).unwrap();
                   let reply = receiver(Call {
@@ -170,18 +169,10 @@ impl Backend for SerialPort {
                   };
                   let self_reply_string = "r:".to_string() + &Self::serialize(&self_reply).unwrap() + "\r\n";
 
-                  loop {
-                    if port_gate.read_clear_to_send().unwrap_or(true) && port_gate.read_data_set_ready().unwrap_or(true) {
-                      break;
-                    }
-                    debug!("port not ready to receive");
-                    tokio::time::sleep(poll_intervall).await;
-                  }
-
                   for _ in 0..2 {
                     match port_gate.write(&self_reply_string.as_bytes()) {
                       Ok(n) => {
-                        debug!("sent {} bytes", n);
+                        debug!("{} sent r: {} bytes", port_gate.name().unwrap_or_else(|| "".to_string()), n);
                         break;
                       }
                       Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => (),
@@ -237,40 +228,38 @@ impl Backend for SerialPort {
     }
 
     let port = Arc::clone(&self.port);
+    let reply_queue = Arc::clone(&self.reply_queue.as_ref().unwrap());
 
-    let poll_intervall = self.poll_intervall;
-
-    self.runtime.block_on(async {
+    self.runtime.block_on(async move {
       let self_call = SelfCall {
         procedure: call.procedure,
         payload: call.payload,
       };
       let self_call_string = "c:".to_string() + &Self::serialize(&self_call).unwrap() + "\r\n";
 
-      let mut port_gate = port.lock().await;
+      let port_name;
+      let written;
+      {
+        let mut port_gate = port.lock().await;
 
-      loop {
-        if port_gate.read_clear_to_send().unwrap_or(true) && port_gate.read_data_set_ready().unwrap_or(true) {
-          break;
-        }
-        debug!("port not ready to receive");
-        tokio::time::sleep(poll_intervall).await;
+        port_name = port_gate.name().unwrap_or_else(|| "".to_string());
+
+        written = port_gate.write(&self_call_string.as_bytes());
       }
 
-      match port_gate.write(&self_call_string.as_bytes()) {
-        Ok(_) => {
-          let self_reply_string = self
-            .reply_queue
-            .as_ref()
-            .unwrap()
-            .lock()
-            .await
-            .recv()
-            .await
-            .ok_or_else::<anyhow::Error, _>(|| Error::NoSenderChannel.into())?;
-          let self_reply: SelfReply = Self::deserialize(&self_reply_string)?;
+      match written {
+        Ok(n) => {
+          debug!("{} sent c: {} bytes", port_name, n);
+          let mut queue_lock = reply_queue.lock().await;
 
-          Ok(Reply { payload: self_reply.payload })
+          match queue_lock.recv().await {
+            Some(self_reply_string) => Ok(Reply {
+              payload: Self::deserialize::<Result<SelfReply, String>>(&self_reply_string)?
+                .map_err(|e| Error::FromFrontend(anyhow::anyhow!(e)))?
+                .payload,
+            }),
+            None => Err(Error::NoSenderChannel.into()),
+          }
         }
         Err(e) => Err(Error::SendError(e).into()),
       }
