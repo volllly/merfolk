@@ -145,23 +145,45 @@ impl Backend for SerialPort {
                 "r:" => {
                   debug!("{} read reply", port_gate.name().unwrap_or_else(|| "".to_string()));
 
-                  tx.send(part[2..].to_string()).await.unwrap()
+                  match tx.send(part[2..].to_string()).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                      for _ in 0..2 {
+                        match port_gate.write(&("r:".to_string() + &Self::serialize(&Err::<SelfReply, _>(e.to_string())).unwrap() + "\r\n").as_bytes()) {
+                          Ok(n) => {
+                            debug!("{} sent r: {} bytes", port_gate.name().unwrap_or_else(|| "".to_string()), n);
+                            break;
+                          }
+                          Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => (),
+                          Err(e) => log::error!("{:?}", e),
+                        }
+                      }
+                    }
+                  }
                 }
                 "c:" => {
                   debug!("{} read call", port_gate.name().unwrap_or_else(|| "".to_string()));
 
                   let read_unpacked = part[2..].to_string();
-                  let self_call: SelfCall = Self::deserialize(&read_unpacked).unwrap();
-                  let reply = receiver(Call {
-                    procedure: self_call.procedure,
-                    payload: self_call.payload,
-                  });
 
-                  let self_reply = match reply.map(|r| SelfReply { payload: r.payload }) {
-                    Ok(ok) => std::result::Result::Ok(ok),
-                    Err(err) => std::result::Result::Err(err.to_string()),
+                  let self_reply_string = match Self::deserialize::<SelfCall>(&read_unpacked) {
+                    Ok(self_call) => {
+                      let reply = receiver(Call {
+                        procedure: self_call.procedure,
+                        payload: self_call.payload,
+                      });
+
+                      let self_reply = match reply.map(|r| SelfReply { payload: r.payload }) {
+                        Ok(ok) => std::result::Result::Ok(ok),
+                        Err(err) => std::result::Result::Err(err.to_string()),
+                      };
+                      match &Self::serialize(&self_reply) {
+                        Ok(ser) => "r:".to_string() + ser + "\r\n",
+                        Err(e) => "r:".to_string() + &Self::serialize(&Err::<SelfReply, _>(e.to_string())).unwrap() + "\r\n",
+                      }
+                    }
+                    Err(e) => "r:".to_string() + &Self::serialize(&Err::<SelfReply, _>(e.to_string())).unwrap() + "\r\n",
                   };
-                  let self_reply_string = "r:".to_string() + &Self::serialize(&self_reply).unwrap() + "\r\n";
 
                   for _ in 0..2 {
                     match port_gate.write(&self_reply_string.as_bytes()) {

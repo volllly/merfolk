@@ -20,7 +20,8 @@ fn register_in_process() {
     frontend: register_caller,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_receiver = MerInit {
     backend: mer_backend_in_process::InProcessInit {
@@ -32,7 +33,8 @@ fn register_in_process() {
     frontend: register_receiver,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_receiver.start().unwrap();
 
@@ -64,7 +66,8 @@ fn register_in_process_duplex() {
     frontend: register_first,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_second = MerInit {
     backend: mer_backend_in_process::InProcessInit {
@@ -76,7 +79,8 @@ fn register_in_process_duplex() {
     frontend: register_second,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_first.start().unwrap();
   mer_second.start().unwrap();

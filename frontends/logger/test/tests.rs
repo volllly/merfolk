@@ -21,7 +21,8 @@ fn logger_in_process() {
     frontend: logger_receiver,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_receiver.start().unwrap();
 
@@ -37,7 +38,8 @@ fn logger_in_process() {
     frontend: logger_caller,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   log::error!("test1");
   log::warn!("test2");

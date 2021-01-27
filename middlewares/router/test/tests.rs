@@ -31,7 +31,8 @@ fn router_authentication_register_in_process() {
     }
     .init_boxed()]),
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_receiver = MerInit {
     backend: mer_backend_in_process::InProcessInit {
@@ -60,7 +61,8 @@ fn router_authentication_register_in_process() {
       .init_boxed(),
     ]),
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_receiver.start().unwrap();
 

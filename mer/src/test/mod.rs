@@ -7,6 +7,9 @@ use crate::{Call, Reply};
 
 use anyhow::Result;
 
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
 struct MockBackend {}
 
 impl Backend for MockBackend {
@@ -72,6 +75,7 @@ fn setup<'a>() -> Mer<'a, MockBackend, MockFrontend> {
     middlewares: None,
   }
   .init()
+  .unwrap()
 }
 
 #[test]

@@ -22,7 +22,8 @@ fn register_http() {
     frontend: register_caller,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_receiver = MerInit {
     backend: mer_backend_http::HttpInit {
@@ -34,7 +35,8 @@ fn register_http() {
     frontend: register_receiver,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_receiver.start().unwrap();
 
@@ -62,7 +64,8 @@ fn register_http_duplex() {
     frontend: register_first,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_second = MerInit {
     backend: mer_backend_http::HttpInit {
@@ -75,7 +78,8 @@ fn register_http_duplex() {
     frontend: register_second,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_first.start().unwrap();
   mer_second.start().unwrap();

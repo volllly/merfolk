@@ -22,12 +22,26 @@ use anyhow::Result;
 use log::trace;
 
 #[cfg(not(feature = "std"))]
-use alloc::string::String;
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 #[derive(Debug)]
+#[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub enum Error {
-  Lock {},
-  MiddlewareWrappingError,
+  #[cfg_attr(feature = "std", error("mutex was poisoned"))]
+  Lock,
+  #[cfg_attr(feature = "std", error("could not register {source}: {source}"))]
+  Register {
+    #[cfg_attr(feature = "std", source)]
+    source: anyhow::Error,
+    end: String,
+  },
+}
+
+#[cfg(not(feature = "std"))]
+impl From<Error> for anyhow::Error {
+  fn from(e: Error) -> Self {
+    anyhow::anyhow!(e)
+  }
 }
 
 #[derive(Debug)]
@@ -69,7 +83,7 @@ where
   B: interfaces::Backend + 'static,
   F: interfaces::Frontend<Backend = B> + 'static,
 {
-  pub fn init(self) -> Mer<'a, B, F> {
+  pub fn init(self) -> Result<Mer<'a, B, F>> {
     trace!("MerInit.init()");
 
     let backend = smart_lock!(self.backend);
@@ -83,56 +97,56 @@ where
     let middlewares_frontend = clone_lock!(middlewares);
 
     access!(backend)
-      .unwrap()
+      .map_err::<anyhow::Error, _>(|_| Error::Lock.into())?
       .register(move |call: Call<B::Intermediate>| {
         trace!("Mer.backend.register()");
-        let middlewares_inner = access!(middlewares_backend).unwrap();
+        let middlewares_inner = access!(middlewares_backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?;
         let unwrapped = middlewares_inner.iter().fold(Ok(call), |acc, m| m.unwrap_call(acc));
 
         let reply = match unwrapped {
-          Ok(unwrapped_ok) => access!(frontend_backend).unwrap().receive(unwrapped_ok),
+          Ok(unwrapped_ok) => access!(frontend_backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.receive(unwrapped_ok),
           Err(err) => Err(err),
         };
 
         middlewares_inner.iter().fold(reply, |acc, m| m.wrap_reply(acc))
       })
-      .unwrap();
+      .map_err::<anyhow::Error, _>(|e| Error::Register { source: e, end: "backend".into() }.into())?;
 
     access!(frontend)
-      .unwrap()
+      .map_err::<anyhow::Error, _>(|_| Error::Lock.into())?
       .register(move |call: Call<B::Intermediate>| {
         trace!("Mer.frontend.register()");
-        let middlewares_inner = access!(middlewares_frontend).unwrap();
+        let middlewares_inner = access!(middlewares_frontend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?;
 
         let wrapped = middlewares_inner.iter().rev().fold(Ok(call), |acc, m| m.wrap_call(acc));
 
         let reply = match wrapped {
-          Ok(wrapped_ok) => access!(backend_frontend).unwrap().call(wrapped_ok),
+          Ok(wrapped_ok) => access!(backend_frontend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.call(wrapped_ok),
           Err(err) => Err(err),
         };
 
         middlewares_inner.iter().fold(reply, |acc, m| m.unwrap_reply(acc))
       })
-      .unwrap();
+      .map_err::<anyhow::Error, _>(|e| Error::Register { source: e, end: "frontend".into() }.into())?;
 
-    Mer {
+    Ok(Mer {
       _phantom: PhantomData,
 
       backend: clone_lock!(backend),
       frontend: clone_lock!(frontend),
-    }
+    })
   }
 }
 
 impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
   pub fn start(&mut self) -> Result<()> {
     trace!("MerInit.start()");
-    access!(self.backend).unwrap().start()
+    access!(self.backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.start()
   }
 
   pub fn stop(&mut self) -> Result<()> {
     trace!("MerInit.stop()");
-    access!(self.backend).unwrap().stop()
+    access!(self.backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.stop()
   }
 
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>

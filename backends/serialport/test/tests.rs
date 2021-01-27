@@ -166,26 +166,20 @@ fn register_serialport() {
   };
 
   let mut mer_caller = MerInit {
-    backend: mer_backend_serialport::SerialPortInit {
-      port: Box::new(port_caller),
-    }
-    .init()
-    .unwrap(),
+    backend: mer_backend_serialport::SerialPortInit { port: Box::new(port_caller) }.init().unwrap(),
     frontend: register_caller,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_receiver = MerInit {
-    backend: mer_backend_serialport::SerialPortInit {
-      port: Box::new(port_receiver),
-    }
-    .init()
-    .unwrap(),
+    backend: mer_backend_serialport::SerialPortInit { port: Box::new(port_receiver) }.init().unwrap(),
     frontend: register_receiver,
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_caller.start().unwrap();
   mer_receiver.start().unwrap();

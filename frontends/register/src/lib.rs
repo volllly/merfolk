@@ -17,8 +17,12 @@ use log::trace;
 pub enum Error {
   #[error("backend error: {0}")]
   FromBackend(#[from] anyhow::Error),
-  #[error("called procedure is not registered")]
-  ProcedureNotRegistered,
+  #[error("called procedure is not registered: {0}")]
+  ProcedureNotRegistered(String),
+  #[error("procedures lock was poinsoned")]
+  Lock,
+  #[error("call not registered mer init()")]
+  CallNotRegistered,
 }
 
 pub struct Register<'a, B: Backend> {
@@ -58,7 +62,7 @@ impl<'a, B: Backend> Register<'a, B> {
   {
     trace!("register procedure");
 
-    self.procedures.lock().unwrap().insert(
+    self.procedures.lock().map_err(|_| Error::Lock)?.insert(
       name.to_string(),
       Box::new(move |call: Call<B::Intermediate>| {
         let reply = procedure(B::deserialize::<C>(&call.payload)?);
@@ -72,7 +76,7 @@ impl<'a, B: Backend> Register<'a, B> {
     trace!("call procedure");
 
     Ok(B::deserialize(
-      &self.call.as_ref().unwrap()(Call {
+      &self.call.as_ref().ok_or(Error::CallNotRegistered)?(Call {
         procedure: procedure.to_string(),
         payload: B::serialize(&payload)?,
       })?
@@ -98,6 +102,11 @@ impl<'a, B: Backend> Frontend for Register<'a, B> {
   fn receive(&self, call: Call<<Self::Backend as Backend>::Intermediate>) -> Result<Reply<<Self::Backend as Backend>::Intermediate>> {
     trace!("receive call");
 
-    self.procedures.lock().unwrap().get(&call.procedure).unwrap()(call)
+    self
+      .procedures
+      .lock()
+      .map_err(|_| Error::Lock)?
+      .get(&call.procedure)
+      .ok_or_else::<anyhow::Error, _>(|| Error::ProcedureNotRegistered(call.procedure.to_owned()).into())?(call)
   }
 }

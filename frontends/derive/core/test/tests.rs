@@ -35,7 +35,8 @@ fn derive_in_process() {
     frontend: DataInit::<i32> { offset: 32 }.init(),
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_register = MerInit {
     backend: mer_backend_in_process::InProcessInit {
@@ -47,7 +48,8 @@ fn derive_in_process() {
     frontend: DataInit::<i32> { offset: 32 }.init(),
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_register.start().unwrap();
 
@@ -89,7 +91,8 @@ fn derive_http() {
     frontend: DataInit::<i32> { offset: 32 }.init(),
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_register = MerInit {
     backend: mer_backend_http::HttpInit {
@@ -101,7 +104,8 @@ fn derive_http() {
     frontend: DataInit::<i32> { offset: 32 }.init(),
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_register.start().unwrap();
 

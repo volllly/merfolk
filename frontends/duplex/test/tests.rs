@@ -44,7 +44,8 @@ fn duplex_in_process_duplex() {
     .init(),
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   let mut mer_second = MerInit {
     backend: mer_backend_in_process::InProcessInit {
@@ -60,7 +61,8 @@ fn duplex_in_process_duplex() {
     .init(),
     middlewares: None,
   }
-  .init();
+  .init()
+  .unwrap();
 
   mer_first.start().unwrap();
   mer_second.start().unwrap();
