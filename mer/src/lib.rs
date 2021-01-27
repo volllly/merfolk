@@ -1,10 +1,8 @@
 #![doc(issue_tracker_base_url = "https://github.com/volllly/mer/issues/")]
 #![doc(html_root_url = "https://github.com/volllly/mer")]
 #![doc(test(no_crate_inject))]
-
 //#[doc(include = "../README.md")]
 //#[doc = include_str!("../../README.md")]
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
