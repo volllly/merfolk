@@ -1,12 +1,16 @@
 [workspace]
 members = [
   "mer",
+
   "frontends/derive/core",
   "frontends/derive/macros",
   "frontends/register",
   "frontends/logger",
+  "frontends/split",
+
   "middlewares/router",
   "middlewares/authentication",
+
   "backends/http",
   "backends/serialport",
   "backends/in-process"

@@ -95,7 +95,7 @@ where
         };
 
         middlewares_inner.iter().fold(reply, |acc, m| m.wrap_reply(acc))
-      }) //TODO: fix error
+      })
       .unwrap();
 
     access!(frontend)
@@ -120,7 +120,6 @@ where
 
       backend: clone_lock!(backend),
       frontend: clone_lock!(frontend),
-      //middlewares
     }
   }
 }

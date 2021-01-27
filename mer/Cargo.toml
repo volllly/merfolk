@@ -17,7 +17,6 @@ serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
 anyhow = { version = "1.0", default-features = false }
 log = { version = "0.4", default-features = false }
 
-[target.'cfg(not(feature = "std"))'.dependencies]
 spin = "0.7.0"
 
 [dev-dependencies]
