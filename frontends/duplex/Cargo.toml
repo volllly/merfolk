@@ -6,13 +6,18 @@ edition = "2018"
 
 [features]
 
+default = ["std"]
+
+std = [
+  "log/std"
+]
+
 [dependencies]
 mer = { path = "../../mer" }
 
 serde = "1.0.116"
 
 anyhow = "1.0"
-thiserror = "1.0"
 log = { version = "0.4", default-features = false }
 
 [dev-dependencies]

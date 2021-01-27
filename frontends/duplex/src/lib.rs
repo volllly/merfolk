@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use std::marker::PhantomData;
 
 use mer::{
@@ -6,15 +8,8 @@ use mer::{
 };
 
 use anyhow::Result;
-use thiserror::Error;
 
 use log::trace;
-
-#[derive(Debug, Error)]
-pub enum Error {
-  #[error("backend error: {0}")]
-  FromBackend(#[from] anyhow::Error),
-}
 
 pub struct Duplex<'a, B, FC, FR>
 where
