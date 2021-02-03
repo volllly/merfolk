@@ -25,35 +25,46 @@ pub enum Error {
   CallNotRegistered,
 }
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct Register<'a, B: Backend> {
   #[allow(clippy::type_complexity)]
+  #[builder(setter(name = "procedures_setter"), private, default = "Arc::new(Mutex::new(HashMap::new()))")]
   procedures: Arc<Mutex<HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>>>>,
 
   #[allow(clippy::type_complexity)]
+  #[builder(private, default = "None")]
   call: Option<Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a + Send>>,
 }
 
+impl<'a, B: Backend> RegisterBuilder<'a, B> {
+  pub fn procedures<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(self, value: HashMap<&'a str, P>) -> Self
+  where
+    P: Fn(C) -> R + 'a,
+  {
+    let mut map: HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>> = HashMap::new();
+
+    value.into_iter().for_each(|p| {
+      map.insert(
+        p.0.to_string(),
+        Box::new(move |call: Call<B::Intermediate>| {
+          let reply = p.1(B::deserialize::<C>(&call.payload)?);
+          Ok(Reply { payload: B::serialize::<R>(&reply)? })
+        }),
+      );
+    });
+
+    self.procedures_setter(Arc::new(Mutex::new(map)))
+  }
+}
+
+impl<'a, B: Backend> Register<'a, B> {
+  pub fn builder() -> RegisterBuilder<'a, B> {
+    RegisterBuilder::default()
+  }
+}
+
 unsafe impl<'a, T: Backend> Send for Register<'a, T> {}
-
-pub struct RegisterInit {}
-
-impl Default for RegisterInit {
-  fn default() -> Self {
-    RegisterInit {}
-  }
-}
-
-impl RegisterInit {
-  pub fn init<'a, B: Backend>(self) -> Register<'a, B> {
-    trace!("initialize register");
-
-    Register {
-      procedures: Arc::new(Mutex::new(HashMap::new())),
-
-      call: None,
-    }
-  }
-}
 
 impl<'a, B: Backend> Register<'a, B> {
   pub fn register<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(&self, name: &str, procedure: P) -> Result<()>

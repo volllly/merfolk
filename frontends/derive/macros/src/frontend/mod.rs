@@ -28,7 +28,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
     .collect();
 
   let mut impl_generic_def = trait_generics.clone();
-  impl_generic_def.params.insert(0, syn::parse_quote! { __B: mer::interfaces::Backend });
+  impl_generic_def.params.insert(0, syn::parse_quote! { __B: ::mer_frontend_derive::reexports::mer::interfaces::Backend });
   impl_generic_def.params.insert(0, syn::parse_quote! { '__a });
 
   let mut impl_generics = trait_generics.clone();
@@ -69,7 +69,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
 
       let ser = quote! {
         let ser_reply = __B::serialize(&reply)?;
-        Ok(mer::Reply { payload: ser_reply })
+        Ok(::mer_frontend_derive::reexports::mer::Reply { payload: ser_reply })
       };
 
       quote! {
@@ -117,7 +117,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
         syn::ReturnType::Default => syn::parse_quote! { () },
         syn::ReturnType::Type(_, t) => syn::parse_quote! { #t },
       };
-      let return_type: syn::ReturnType = syn::parse_quote! { -> anyhow::Result<#old_return_type> };
+      let return_type: syn::ReturnType = syn::parse_quote! { -> ::mer_frontend_derive::reexports::anyhow::Result<#old_return_type> };
 
       quote! {
         pub fn #item_name(#signature) #return_type {
@@ -125,7 +125,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
 
           let ser_payload = __B::serialize(&(#( #arguments ),*))?;
 
-          let reply = self.__call.as_ref().unwrap()(mer::Call {
+          let reply = self.__call.as_ref().unwrap()(::mer_frontend_derive::reexports::mer::Call {
             procedure: stringify!(#item_name).to_string(),
             payload: ser_payload,
           })?
@@ -141,7 +141,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
   #[cfg(feature = "std")]
   let error = quote! { Err(mer_frontend_derive::Error::UnknownProcedure { procedure: call.procedure }.into()) };
   #[cfg(not(feature = "std"))]
-  let error = quote! { Err(anyhow::anyhow!("unknown procedure: {}", call.procedure)) };
+  let error = quote! { Err(::mer_frontend_derive::reexports::anyhow::anyhow!("unknown procedure: {}", call.procedure)) };
 
   Ok(quote! {
     trait #trait_name #impl_generic_def #where_clause {
@@ -153,7 +153,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
     }
 
     impl #impl_generic_def #service_name #impl_generics #where_clause {
-        fn __receive(&self, call: mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> {
+        fn __receive(&self, call: ::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> {
           match call.procedure.as_str() {
             #( #receiver_impl_items ),*
             _ => {
@@ -172,7 +172,7 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
 
 pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Error>> {
   let struct_name = &input.ident;
-  let struct_name_init = format_ident!("{}Init", &input.ident);
+  let struct_name_builder = format_ident!("{}Builder", &input.ident);
   let struct_generics = &input.generics;
   let where_clause = &struct_generics.where_clause;
 
@@ -184,13 +184,8 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
     rest => quote! { #rest },
   };
 
-  let field_names = match &input.fields {
-    syn::Fields::Named(named) => named.named.iter().filter_map(|f| f.ident.clone()).map(|f| quote! { #f: self.#f }).collect(),
-    _ => vec![],
-  };
-
   let mut impl_generic_def = struct_generics.clone();
-  impl_generic_def.params.insert(0, syn::parse_quote! { __B: mer::interfaces::Backend });
+  impl_generic_def.params.insert(0, syn::parse_quote! { __B: ::mer_frontend_derive::reexports::mer::interfaces::Backend });
   impl_generic_def.params.insert(0, syn::parse_quote! { '__a });
 
   let mut impl_generics = struct_generics.clone();
@@ -198,42 +193,38 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
   impl_generics.params.insert(0, syn::parse_quote! { '__a });
 
   Ok(quote! {
+    #[derive(derive_builder::Builder)]
+    #[builder(pattern = "owned")]
+    #[cfg_attr(not(feature = "std"), builder(no_std))]
     struct #struct_name #impl_generic_def #where_clause {
       #fields,
 
-      __call: Option<Box<dyn Fn(mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> + '__a + Send>>
+      #[builder(private, default = "None")]
+      __call: Option<Box<dyn Fn(::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> + '__a + Send>>
     }
 
-    #[derive(Default)]
-    struct #struct_name_init #struct_generics #where_clause {
-      #fields,
-    }
 
-    impl #struct_generics #struct_name_init #struct_generics #where_clause {
-      pub fn init<'__a, __B: mer::interfaces::Backend>(self) -> #struct_name #impl_generics {
-        #struct_name {
-          #( #field_names ),*,
-
-          __call: None
-        }
+    impl #impl_generic_def #struct_name #impl_generics #where_clause {
+      pub fn builder() -> #struct_name_builder #impl_generics {
+        #struct_name_builder::default()
       }
     }
 
-    impl #impl_generic_def mer::interfaces::Frontend for #struct_name #impl_generics #where_clause {
+    impl #impl_generic_def ::mer_frontend_derive::reexports::mer::interfaces::Frontend for #struct_name #impl_generics #where_clause {
       type Backend = __B;
 
-      fn register<__T>(&mut self, caller: __T) -> anyhow::Result<()>
+      fn register<__T>(&mut self, caller: __T) -> ::mer_frontend_derive::reexports::anyhow::Result<()>
       where
-        __T: Fn(mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> + '__a + Send,
+        __T: Fn(::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> + '__a + Send,
       {
         self.__call = Some(Box::new(caller));
         Ok(())
       }
 
-      fn receive(&self, call: mer::Call<__B::Intermediate>) -> anyhow::Result<mer::Reply<__B::Intermediate>> {
+      fn receive(&self, call: ::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> {
         log::debug!("receiving: Call {{ prodecure: {:?}, payload: ... }}", &call.procedure);
 
-        self.__receive(call).map_err(core::convert::Into::into)
+        self.__receive(call).map_err(::core::convert::Into::into)
       }
     }
   })

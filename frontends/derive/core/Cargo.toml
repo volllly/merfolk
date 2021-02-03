@@ -14,12 +14,12 @@ std = [
 ]
 
 [dependencies]
+anyhow = "1.0"
+derive_builder = "0.10.0-alpha"
+log = { version = "0.4", default-features = false }
 mer = { path = "../../../mer" }
 mer_frontend_derive_macros = { path = "../macros" }
-
-anyhow = "1.0"
 thiserror = { version = "1.0", optional = true }
-log = { version = "0.4", default-features = false }
 
 [dev-dependencies]
 mer_backend_in_process = { path = "../../../backends/in-process" }

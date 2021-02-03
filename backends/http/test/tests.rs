@@ -7,36 +7,27 @@ fn add(a: i32, b: i32) -> i32 {
 
 #[test]
 fn register_http() {
-  let register_caller = mer_frontend_register::RegisterInit {}.init();
-  let register_receiver = mer_frontend_register::RegisterInit {}.init();
+  let register_caller = mer_frontend_register::Register::builder().build().unwrap();
+  let register_receiver = mer_frontend_register::Register::builder().build().unwrap();
   register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let mer_caller = MerInit {
-    backend: mer_backend_http::HttpInit {
-      speak: "http://localhost:8080".parse::<hyper::Uri>().unwrap().into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: register_caller,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mer_caller = Mer::builder()
+    .backend(mer_backend_http::Http::builder().speak("http://localhost:8080".parse::<hyper::Uri>().unwrap().into()).build().unwrap())
+    .frontend(register_caller)
+    .build()
+    .unwrap();
 
-  let mut mer_receiver = MerInit {
-    backend: mer_backend_http::HttpInit {
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: register_receiver,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_receiver = Mer::builder()
+    .backend(
+      mer_backend_http::Http::builder()
+        .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080))
+        .build()
+        .unwrap(),
+    )
+    .frontend(register_receiver)
+    .build()
+    .unwrap();
 
   mer_receiver.start().unwrap();
 
@@ -47,39 +38,35 @@ fn register_http() {
 
 #[test]
 fn register_http_duplex() {
-  let register_first = mer_frontend_register::RegisterInit {}.init();
-  let register_second = mer_frontend_register::RegisterInit {}.init();
+  let register_first = mer_frontend_register::Register::builder().build().unwrap();
+  let register_second = mer_frontend_register::Register::builder().build().unwrap();
 
   register_first.register("add", |(a, b)| add(a, b)).unwrap();
   register_second.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let mut mer_first = MerInit {
-    backend: mer_backend_http::HttpInit {
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8085).into(),
-      speak: "http://localhost:8084".parse::<hyper::Uri>().unwrap().into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: register_first,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_first = Mer::builder()
+    .backend(
+      mer_backend_http::Http::builder()
+        .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8085))
+        .speak("http://localhost:8084".parse::<hyper::Uri>().unwrap())
+        .build()
+        .unwrap(),
+    )
+    .frontend(register_first)
+    .build()
+    .unwrap();
 
-  let mut mer_second = MerInit {
-    backend: mer_backend_http::HttpInit {
-      speak: "http://localhost:8085".parse::<hyper::Uri>().unwrap().into(),
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084).into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: register_second,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_second = Mer::builder()
+    .backend(
+      mer_backend_http::Http::builder()
+        .speak("http://localhost:8085".parse::<hyper::Uri>().unwrap())
+        .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084))
+        .build()
+        .unwrap(),
+    )
+    .frontend(register_second)
+    .build()
+    .unwrap();
 
   mer_first.start().unwrap();
   mer_second.start().unwrap();

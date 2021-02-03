@@ -9,17 +9,15 @@ edition = "2018"
 default = []
 
 [dependencies]
+anyhow = "1.0"
+derive_builder = "0.10.0-alpha"
+log = "0.4"
 mer = { path = "../../mer" }
-
 serde = { version = "1.0.116", features = ["derive"] }
 serde_json = "1.0.57"
-
 serialport = "4.0"
-tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync", "time"] }
-
-anyhow = "1.0"
 thiserror = "1.0"
-log = "0.4"
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync", "time"] }
 
 [dev-dependencies]
 mer_frontend_register = { path = "../../frontends/register" }

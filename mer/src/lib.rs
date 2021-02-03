@@ -15,10 +15,9 @@ pub mod interfaces;
 #[cfg(test)]
 mod test;
 
-use core::marker::PhantomData;
-
 use anyhow::Result;
 
+use helpers::smart_lock::SmartLock;
 use log::trace;
 
 #[cfg(not(feature = "std"))]
@@ -35,6 +34,8 @@ pub enum Error {
     source: anyhow::Error,
     end: String,
   },
+  #[cfg_attr(feature = "std", error("{0} must be initialized"))]
+  Init(String),
 }
 
 #[cfg(not(feature = "std"))]
@@ -59,36 +60,49 @@ pub struct Reply<T> {
 unsafe impl<T> Send for Reply<T> where T: Send {}
 unsafe impl<T> Sync for Reply<T> where T: Sync {}
 
-pub struct Mer<'a, B, F>
+#[derive(derive_builder::Builder)]
+#[cfg_attr(not(feature = "std"), builder(no_std))]
+#[builder(pattern = "owned", build_fn(skip))]
+pub struct Mer<B, F>
 where
   B: interfaces::Backend,
-  B: 'a,
-  F: interfaces::Frontend,
-  F: 'a,
+  F: interfaces::Frontend<Backend = B>,
 {
-  _phantom: PhantomData<&'a B>,
+  #[builder(setter(into, name = "backend_setter"), private)]
+  backend: SmartLock<B>,
+  #[builder(setter(into, name = "frontend_setter"), private)]
+  frontend: SmartLock<F>,
 
-  backend: smart_lock_type!(B),
-  frontend: smart_lock_type!(F),
+  #[allow(dead_code)]
+  #[builder(setter(into, name = "middlewares_setter"), private)]
+  middlewares: SmartLock<Vec<Box<dyn interfaces::Middleware<Backend = B>>>>,
 }
 
-pub struct MerInit<B, F> {
-  pub backend: B,
-  pub frontend: F,
-  pub middlewares: Option<Vec<Box<dyn interfaces::Middleware<Backend = B>>>>,
-}
-
-impl<'a, B, F> MerInit<B, F>
+impl<'a, B, F> MerBuilder<B, F>
 where
-  B: interfaces::Backend + 'static,
-  F: interfaces::Frontend<Backend = B> + 'static,
+  B: interfaces::Backend,
+  B: 'static,
+  F: interfaces::Frontend<Backend = B>,
+  F: 'static,
 {
-  pub fn init(self) -> Result<Mer<'a, B, F>> {
-    trace!("MerInit.init()");
+  pub fn backend(self, value: B) -> Self {
+    self.backend_setter(smart_lock!(value))
+  }
 
-    let backend = smart_lock!(self.backend);
-    let frontend = smart_lock!(self.frontend);
-    let middlewares = smart_lock!(self.middlewares.unwrap_or_default());
+  pub fn frontend(self, value: F) -> Self {
+    self.frontend_setter(smart_lock!(value))
+  }
+
+  pub fn middlewares(self, value: Vec<Box<dyn interfaces::Middleware<Backend = B>>>) -> Self {
+    self.middlewares_setter(smart_lock!(value))
+  }
+
+  pub fn build(self) -> Result<Mer<B, F>> {
+    trace!("MerBuilder.build()");
+
+    let backend = self.backend.ok_or_else(|| Error::Init("backend".into()))?;
+    let frontend = self.frontend.ok_or_else(|| Error::Init("frontend".into()))?;
+    let middlewares = self.middlewares.unwrap_or_default();
 
     let frontend_backend = clone_lock!(frontend);
     let middlewares_backend = clone_lock!(middlewares);
@@ -130,22 +144,27 @@ where
       .map_err::<anyhow::Error, _>(|e| Error::Register { source: e, end: "frontend".into() }.into())?;
 
     Ok(Mer {
-      _phantom: PhantomData,
-
       backend: clone_lock!(backend),
       frontend: clone_lock!(frontend),
+      middlewares: clone_lock!(middlewares),
     })
   }
 }
 
-impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
+impl<B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
+  pub fn builder() -> MerBuilder<B, F> {
+    MerBuilder::default()
+  }
+}
+
+impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
   pub fn start(&mut self) -> Result<()> {
-    trace!("MerInit.start()");
+    trace!("Mer.start()");
     access!(self.backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.start()
   }
 
   pub fn stop(&mut self) -> Result<()> {
-    trace!("MerInit.stop()");
+    trace!("Mer.stop()");
     access!(self.backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.stop()
   }
 
@@ -153,7 +172,7 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
   where
     T: Fn(&F) -> R,
   {
-    trace!("MerInit.frontend()");
+    trace!("Mer.frontend()");
     Ok(access(&*match access!(self.frontend) {
       Ok(frontend) => frontend,
       Err(_) => return Err(Error::Lock {}),
@@ -164,7 +183,7 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend> Mer<'a, B, F> {
   where
     T: Fn(&B) -> R,
   {
-    trace!("MerInit.backend()");
+    trace!("Mer.backend()");
     Ok(access(&*match access!(self.backend) {
       Ok(backend) => backend,
       Err(_) => return Err(Error::Lock {}),

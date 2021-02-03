@@ -7,13 +7,12 @@ edition = "2018"
 [features]
 
 [dependencies]
-mer = { path = "../../mer" }
-
-serde = "1.0.116"
-
 anyhow = "1.0"
+derive_builder = "0.10.0-alpha"
+log = { version = "0.4", features = ["std"] }
+mer = { path = "../../mer" }
+serde = "1.0.116"
 thiserror = "1.0"
-log = { version = "0.4" }
 wildmatch = "1.0"
 
 [dev-dependencies]

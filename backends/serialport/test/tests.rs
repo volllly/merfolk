@@ -150,8 +150,8 @@ impl std::io::Read for MockTTY {
 #[test]
 #[cfg(unix)]
 fn register_serialport() {
-  let register_caller = mer_frontend_register::RegisterInit {}.init();
-  let register_receiver = mer_frontend_register::RegisterInit {}.init();
+  let register_caller = mer_frontend_register::Register::builder().build().unwrap();
+  let register_receiver = mer_frontend_register::Register::builder().build().unwrap();
   register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
@@ -167,21 +167,17 @@ fn register_serialport() {
     s: Box::new(pairs.0 .1),
   };
 
-  let mut mer_caller = MerInit {
-    backend: mer_backend_serialport::SerialPortInit { port: Box::new(port_caller) }.init().unwrap(),
-    frontend: register_caller,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_caller = Mer::builder()
+    .backend(mer_backend_serialport::SerialPort::builder().port(port_caller).build().unwrap())
+    .frontend(register_caller)
+    .build()
+    .unwrap();
 
-  let mut mer_receiver = MerInit {
-    backend: mer_backend_serialport::SerialPortInit { port: Box::new(port_receiver) }.init().unwrap(),
-    frontend: register_receiver,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_receiver = Mer::builder()
+    .backend(mer_backend_serialport::SerialPort::builder().port(port_receiver).build().unwrap())
+    .frontend(register_receiver)
+    .build()
+    .unwrap();
 
   mer_caller.start().unwrap();
   mer_receiver.start().unwrap();

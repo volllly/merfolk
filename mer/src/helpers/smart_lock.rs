@@ -12,6 +12,8 @@ macro_rules! smart_lock_type {
   }
 }
 
+pub type SmartLock<T> = smart_lock_type!(T);
+
 #[cfg(feature = "std")]
 macro_rules! smart_lock {
   ($x:expr) => {

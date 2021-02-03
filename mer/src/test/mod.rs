@@ -1,6 +1,6 @@
 use crate::{
   interfaces::{Backend, Frontend},
-  Mer, MerInit,
+  Mer,
 };
 
 use crate::{Call, Reply};
@@ -68,14 +68,12 @@ impl MockFrontend {
   }
 }
 
-fn setup<'a>() -> Mer<'a, MockBackend, MockFrontend> {
-  MerInit {
-    backend: MockBackend {},
-    frontend: MockFrontend {},
-    middlewares: None,
-  }
-  .init()
-  .unwrap()
+fn setup<'a>() -> Mer<MockBackend, MockFrontend> {
+  crate::MerBuilder::<MockBackend, MockFrontend>::default()
+    .backend(MockBackend {}.into())
+    .frontend(MockFrontend {}.into())
+    .build()
+    .unwrap()
 }
 
 #[test]

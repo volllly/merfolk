@@ -8,7 +8,6 @@ use mer::{
 use anyhow::Result;
 use thiserror::Error;
 
-use log::trace;
 use regex::Regex;
 #[derive(Debug, Error)]
 pub enum Error {
@@ -16,32 +15,25 @@ pub enum Error {
   RegexParse(#[from] regex::Error),
 }
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct Router<B> {
+  #[builder(private, default = "PhantomData")]
   __phantom: PhantomData<B>,
 
+  #[builder(setter(into), default = "vec![]")]
   routes: Vec<(String, String)>,
 }
 
-#[derive(Default)]
-pub struct RouterInit {
-  pub routes: Vec<(String, String)>,
+impl<B> RouterBuilder<B> {
+  pub fn build_boxed(self) -> std::result::Result<Box<Router<B>>, RouterBuilderError> {
+    self.build().map(|s| Box::new(s))
+  }
 }
 
-impl RouterInit {
-  pub fn init<B>(self) -> Router<B> {
-    trace!("initialze RouterInit");
-
-    Router {
-      __phantom: PhantomData,
-
-      routes: self.routes,
-    }
-  }
-
-  pub fn init_boxed<B>(self) -> Box<Router<B>> {
-    trace!("initialze RouterInit");
-
-    Box::new(self.init())
+impl<B> Router<B> {
+  pub fn builder() -> RouterBuilder<B> {
+    RouterBuilder::default()
   }
 }
 

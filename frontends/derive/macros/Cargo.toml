@@ -11,18 +11,19 @@ default = ["std"]
 std = ["log/std"]
 
 [dependencies]
-syn = "1.0"
-quote = "1.0"
-proc-macro2 = "1.0"
+anyhow = "1.0"
 darling = "0.12"
 log = { version = "0.4", default-features = false }
-anyhow = "1.0"
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = "1.0"
 
 [dev-dependencies]
 mer_frontend_derive = { path = "../core" }
 
 mer = { path = "../../../mer" }
 serde = { version = "1.0", default-features = false }
+derive_builder = "0.10.0-alpha"
 
 [lib]
 proc-macro = true

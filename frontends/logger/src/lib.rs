@@ -33,51 +33,48 @@ struct LoggerInstance {
   call: Arc<dyn Fn(&Record) + 'static + Send + Sync>,
 }
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct Logger<'a, B: Backend> {
+  #[builder(setter(into, strip_option), default = "None")]
   level: Option<Level>,
+
+  #[builder(setter(name = "sink_setter", strip_option), private, default = "None")]
   sink: Option<Box<dyn Fn(Level, String)>>,
+
+  #[builder(setter(name = "ignore_targets_setter", strip_option), private, default = "Arc::new(None)")]
   ignore_targets: Arc<Option<Vec<&'static str>>>,
+
+  #[builder(setter(name = "allow_targets_setter", strip_option), private, default = "Arc::new(None)")]
   allow_targets: Arc<Option<Vec<&'static str>>>,
 
+  #[builder(private, default = "PhantomData")]
   __phantom: std::marker::PhantomData<&'a B>,
 }
 
+impl<'a, B: Backend> LoggerBuilder<'a, B> {
+  pub fn sink<S: 'static + Fn(Level, String)>(self, value: S) -> Self {
+    self.sink_setter(Box::new(value))
+  }
+
+  pub fn ignore_targets(self, mut value: Vec<&'static str>) -> Self {
+    value.push("mer");
+
+    self.ignore_targets_setter(Arc::new(Some(value)))
+  }
+
+  pub fn allow_targets(self, value: Vec<&'static str>) -> Self {
+    self.allow_targets_setter(Arc::new(Some(value)))
+  }
+}
+
+impl<'a, B: Backend> Logger<'a, B> {
+  pub fn builder() -> LoggerBuilder<'a, B> {
+    LoggerBuilder::default()
+  }
+}
+
 unsafe impl<'a, T: Backend> Send for Logger<'a, T> {}
-
-pub struct LoggerInit {
-  pub level: Option<Level>,
-  pub sink: Option<Box<dyn Fn(Level, String)>>,
-  pub ignore_targets: Option<Vec<&'static str>>,
-  pub allow_targets: Option<Vec<&'static str>>,
-}
-
-impl Default for LoggerInit {
-  fn default() -> Self {
-    LoggerInit {
-      level: None,
-      sink: None,
-      ignore_targets: None,
-      allow_targets: None,
-    }
-  }
-}
-
-impl LoggerInit {
-  pub fn init<'a, B: Backend>(self) -> Logger<'a, B> {
-    let mut ignore_targets = self.ignore_targets.unwrap_or_default();
-
-    ignore_targets.push("mer");
-
-    Logger {
-      level: self.level,
-      sink: self.sink,
-      ignore_targets: Arc::new(ignore_targets.into()),
-      allow_targets: Arc::new(self.allow_targets),
-
-      __phantom: PhantomData,
-    }
-  }
-}
 
 impl log::Log for LoggerInstance {
   fn enabled(&self, metadata: &Metadata) -> bool {

@@ -30,26 +30,17 @@ fn derive_in_process() {
     tokio::sync::mpsc::Receiver<mer_backend_in_process::InProcessChannel>,
   ) = tokio::sync::mpsc::channel(1);
 
-  let mer_caller = MerInit {
-    backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
-    frontend: DataInit::<i32> { offset: 32 }.init(),
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mer_caller = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().to(to).build().unwrap())
+    .frontend(Data::builder().offset(32).build().unwrap())
+    .build()
+    .unwrap();
 
-  let mut mer_register = MerInit {
-    backend: mer_backend_in_process::InProcessInit {
-      from: from.into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: DataInit::<i32> { offset: 32 }.init(),
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_register = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
+    .frontend(Data::builder().offset(32).build().unwrap())
+    .build()
+    .unwrap();
 
   mer_register.start().unwrap();
 
@@ -81,31 +72,22 @@ fn derive_http() {
     }
   }
 
-  let mer_caller = MerInit {
-    backend: mer_backend_http::HttpInit {
-      speak: "http://localhost:8083".parse::<hyper::Uri>().unwrap().into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: DataInit::<i32> { offset: 32 }.init(),
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mer_caller = Mer::builder()
+    .backend(mer_backend_http::Http::builder().speak("http://localhost:8083".parse::<hyper::Uri>().unwrap()).build().unwrap())
+    .frontend(Data::builder().offset(32).build().unwrap())
+    .build()
+    .unwrap();
 
-  let mut mer_register = MerInit {
-    backend: mer_backend_http::HttpInit {
-      listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8083).into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: DataInit::<i32> { offset: 32 }.init(),
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_register = Mer::builder()
+    .backend(
+      mer_backend_http::Http::builder()
+        .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8083))
+        .build()
+        .unwrap(),
+    )
+    .frontend(Data::builder().offset(32).build().unwrap())
+    .build()
+    .unwrap();
 
   mer_register.start().unwrap();
 

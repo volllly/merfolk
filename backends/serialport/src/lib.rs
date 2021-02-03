@@ -29,44 +29,39 @@ pub enum Error {
   NoSenderChannel,
   #[error("from frontend: {0}")]
   FromFrontend(#[source] anyhow::Error),
+  #[error("{0} must be initialized")]
+  Init(String),
 }
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct SerialPort {
+  #[builder(setter(name = "port_setter"), private)]
   port: Arc<Mutex<Box<dyn serialport::SerialPort>>>,
 
   #[allow(clippy::type_complexity)]
+  #[builder(private, default = "None")]
   receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
 
+  #[builder(private, default = "None")]
   reply_queue: Option<Arc<Mutex<tokio::sync::mpsc::Receiver<String>>>>,
 
+  #[builder(private, default = "Runtime::new().map_err(Error::RuntimeCreation).map_err(|e| e.to_string())?")]
   runtime: Runtime,
 
+  #[builder(private, default = "None")]
   handle: Option<tokio::task::JoinHandle<std::convert::Infallible>>,
 }
 
-pub struct SerialPortInit {
-  pub port: Box<dyn serialport::SerialPort>,
-}
-
-impl From<SerialPortInit> for Result<SerialPort> {
-  fn from(from: SerialPortInit) -> Self {
-    from.init()
+impl SerialPortBuilder {
+  pub fn port<S: 'static + serialport::SerialPort>(self, value: S) -> Self {
+    self.port_setter(Arc::new(Mutex::new(Box::new(value))))
   }
 }
 
-impl SerialPortInit {
-  pub fn init(self) -> Result<SerialPort> {
-    trace!("initialize SerialPortInit");
-
-    debug!("port: {:?}", self.port.name());
-
-    Ok(SerialPort {
-      port: Arc::new(Mutex::new(self.port)),
-      receiver: None,
-      reply_queue: None,
-      handle: None,
-      runtime: Runtime::new().map_err(Error::RuntimeCreation)?,
-    })
+impl SerialPort {
+  pub fn builder() -> SerialPortBuilder {
+    SerialPortBuilder::default()
   }
 }
 

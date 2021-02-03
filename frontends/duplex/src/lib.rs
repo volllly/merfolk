@@ -11,15 +11,32 @@ use anyhow::Result;
 
 use log::trace;
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
+#[cfg_attr(not(feature = "std"), builder(no_std))]
 pub struct Duplex<'a, B, FC, FR>
 where
   B: Backend + 'a,
   FC: Frontend<Backend = B> + 'a,
   FR: Frontend<Backend = B> + 'a,
 {
+  #[builder(private, default = "PhantomData")]
   __phantom: PhantomData<&'a B>,
+
   pub caller: FC,
+
   pub receiver: FR,
+}
+
+impl<'a, B, FC, FR> Duplex<'a, B, FC, FR>
+where
+  B: Backend + 'a,
+  FC: Frontend<Backend = B> + 'a,
+  FR: Frontend<Backend = B> + 'a,
+{
+  pub fn builder() -> DuplexBuilder<'a, B, FC, FR> {
+    DuplexBuilder::default()
+  }
 }
 
 unsafe impl<'a, B, FC, FR> Send for Duplex<'a, B, FC, FR>
@@ -28,34 +45,6 @@ where
   FC: Frontend<Backend = B>,
   FR: Frontend<Backend = B>,
 {
-}
-
-pub struct DuplexInit<B, FC, FR>
-where
-  B: Backend,
-  FC: Frontend<Backend = B>,
-  FR: Frontend<Backend = B>,
-{
-  pub caller: FC,
-  pub receiver: FR,
-}
-
-impl<'a, B, FC, FR> DuplexInit<B, FC, FR>
-where
-  B: Backend,
-  FC: Frontend<Backend = B>,
-  FR: Frontend<Backend = B>,
-{
-  pub fn init(self) -> Duplex<'a, B, FC, FR> {
-    trace!("initialize duplex");
-
-    Duplex {
-      __phantom: PhantomData,
-
-      caller: self.caller,
-      receiver: self.receiver,
-    }
-  }
 }
 
 impl<'a, B, FC, FR> Frontend for Duplex<'a, B, FC, FR>

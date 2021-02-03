@@ -10,13 +10,14 @@ use mer::{
 use anyhow::Result;
 use thiserror::Error;
 
-use log::trace;
 use wildmatch::WildMatch;
 
 #[derive(Debug, Error)]
 pub enum Error {
   #[error("could not find scope for procedure: {procedure}")]
   ScopeNotFound { procedure: String },
+  #[error("auth was not provided")]
+  NoAuth,
   #[error("authentication failed for {auth} in scope {scope:?}: {source}")]
   AuthenticationFailed {
     auth: String,
@@ -28,44 +29,39 @@ pub enum Error {
   NoValidatorRegistered,
 }
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct Authentication<'a, B> {
+  #[builder(private, default = "PhantomData")]
   __phantom: PhantomData<B>,
 
+  #[builder(setter(into, strip_option), default = "None")]
   scopes: Option<Vec<(String, String)>>,
 
   #[allow(clippy::type_complexity)]
+  #[builder(setter(name = "authenticator_setter", strip_option), private, default = "None")]
   authenticator: Option<Box<dyn Fn((String, String), Vec<String>) -> Result<()> + 'a + Send>>,
 
-  auth: (String, String),
+  #[builder(setter(into, strip_option), default = "None")]
+  auth: Option<(String, String)>,
 }
 
-#[derive(Default)]
-pub struct AuthenticationInit<'a> {
-  pub scopes: Option<Vec<(String, String)>>,
-
-  #[allow(clippy::type_complexity)]
-  pub authenticator: Option<Box<dyn Fn((String, String), Vec<String>) -> Result<()> + 'a + Send>>,
-
-  pub auth: (String, String),
-}
-
-impl<'a> AuthenticationInit<'a> {
-  pub fn init<B>(self) -> Authentication<'a, B> {
-    trace!("initialze AuthenticationInit");
-
-    Authentication {
-      __phantom: PhantomData,
-
-      authenticator: self.authenticator,
-      scopes: self.scopes,
-      auth: self.auth,
-    }
+impl<'a, B> AuthenticationBuilder<'a, B> {
+  pub fn authenticator<A>(self, value: A) -> Self
+  where
+    A: Fn((String, String), Vec<String>) -> Result<()> + 'a + Send,
+  {
+    self.authenticator_setter(Box::new(value))
   }
 
-  pub fn init_boxed<B>(self) -> Box<Authentication<'a, B>> {
-    trace!("initialze AuthenticationInit");
+  pub fn build_boxed(self) -> std::result::Result<Box<Authentication<'a, B>>, AuthenticationBuilderError> {
+    self.build().map(|s| Box::new(s))
+  }
+}
 
-    Box::new(self.init())
+impl<'a, B> Authentication<'a, B> {
+  pub fn builder() -> AuthenticationBuilder<'a, B> {
+    AuthenticationBuilder::default()
   }
 }
 
@@ -79,11 +75,13 @@ impl<'a, B: Backend> Middleware for Authentication<'a, B> {
   type Backend = B;
 
   fn wrap_call(&self, call: Result<crate::Call<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Call<<Self::Backend as Backend>::Intermediate>> {
+    let auth = self.auth.as_ref().ok_or(Error::NoAuth)?;
+
     if let Ok(call) = call {
       Ok(Call {
         procedure: call.procedure,
         payload: B::serialize(&Intermediate::<B> {
-          auth: (self.auth.0.to_string(), self.auth.1.to_string()),
+          auth: (auth.0.to_string(), auth.1.to_string()),
           payload: call.payload,
         })?,
       })

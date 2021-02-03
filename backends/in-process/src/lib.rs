@@ -40,41 +40,35 @@ pub enum Error {
   NotStarted,
 }
 
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct InProcess {
   #[allow(clippy::type_complexity)]
+  #[builder(private, default = "None")]
   receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
 
+  #[builder(private, default = "Runtime::new().map_err(Error::RuntimeCreation).map_err(|e| e.to_string())?")]
   runtime: Runtime,
 
+  #[builder(private, default = "None")]
   handle: Option<tokio::task::JoinHandle<std::convert::Infallible>>,
 
+  #[builder(setter(into, strip_option), default = "None")]
   to: Option<Sender<InProcessChannel>>,
+
+  #[builder(setter(into, strip_option, name = "from_setter"), private, default = "None")]
   from: Option<Arc<tokio::sync::Mutex<Receiver<InProcessChannel>>>>,
 }
 
-pub struct InProcessInit {
-  pub to: Option<Sender<InProcessChannel>>,
-  pub from: Option<Receiver<InProcessChannel>>,
-}
-
-impl Default for InProcessInit {
-  fn default() -> Self {
-    InProcessInit { to: None, from: None }
+impl InProcessBuilder {
+  pub fn from(self, value: Receiver<InProcessChannel>) -> Self {
+    self.from_setter(Arc::new(tokio::sync::Mutex::new(value)))
   }
 }
 
-impl InProcessInit {
-  pub fn init(self) -> Result<InProcess> {
-    trace!("initialze InProcessInit");
-
-    Ok(InProcess {
-      receiver: None,
-      to: self.to,
-      from: if let Some(from) = self.from { Some(Arc::new(tokio::sync::Mutex::new(from))) } else { None },
-
-      runtime: Runtime::new().map_err(Error::RuntimeCreation)?,
-      handle: None,
-    })
+impl InProcess {
+  pub fn builder() -> InProcessBuilder {
+    InProcessBuilder::default()
   }
 }
 
@@ -82,7 +76,7 @@ impl Backend for InProcess {
   type Intermediate = String;
 
   fn start(&mut self) -> Result<()> {
-    trace!("start InProcessInit");
+    trace!("start InProcess");
 
     if self.handle.is_some() {
       return Err(Error::AlreadyStarted.into());
@@ -108,7 +102,7 @@ impl Backend for InProcess {
   }
 
   fn stop(&mut self) -> Result<()> {
-    trace!("stop InProcessInit");
+    trace!("stop InProcess");
 
     match &self.handle {
       None => Err(Error::NotStarted.into()),

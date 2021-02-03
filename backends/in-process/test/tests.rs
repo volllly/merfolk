@@ -8,33 +8,24 @@ fn add(a: i32, b: i32) -> i32 {
 fn register_in_process() {
   use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-  let register_caller = mer_frontend_register::RegisterInit {}.init();
-  let register_receiver = mer_frontend_register::RegisterInit {}.init();
+  let register_caller = mer_frontend_register::Register::builder().build().unwrap();
+  let register_receiver = mer_frontend_register::Register::builder().build().unwrap();
   register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let (to, from): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = channel(1);
 
-  let mer_caller = MerInit {
-    backend: mer_backend_in_process::InProcessInit { to: to.into(), ..Default::default() }.init().unwrap(),
-    frontend: register_caller,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mer_caller = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().to(to).build().unwrap())
+    .frontend(register_caller)
+    .build()
+    .unwrap();
 
-  let mut mer_receiver = MerInit {
-    backend: mer_backend_in_process::InProcessInit {
-      from: from.into(),
-      ..Default::default()
-    }
-    .init()
-    .unwrap(),
-    frontend: register_receiver,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_receiver = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
+    .frontend(register_receiver)
+    .build()
+    .unwrap();
 
   mer_receiver.start().unwrap();
 
@@ -47,8 +38,8 @@ fn register_in_process() {
 fn register_in_process_duplex() {
   use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-  let register_first = mer_frontend_register::RegisterInit {}.init();
-  let register_second = mer_frontend_register::RegisterInit {}.init();
+  let register_first = mer_frontend_register::Register::builder().build().unwrap();
+  let register_second = mer_frontend_register::Register::builder().build().unwrap();
 
   register_first.register("add", |(a, b)| add(a, b)).unwrap();
   register_second.register("add", |(a, b)| add(a, b)).unwrap();
@@ -56,31 +47,17 @@ fn register_in_process_duplex() {
   let (to_first, from_first): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = channel(1);
   let (to_second, from_second): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = channel(1);
 
-  let mut mer_first = MerInit {
-    backend: mer_backend_in_process::InProcessInit {
-      to: to_first.into(),
-      from: from_second.into(),
-    }
-    .init()
-    .unwrap(),
-    frontend: register_first,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_first = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().to(to_first).from(from_second).build().unwrap())
+    .frontend(register_first)
+    .build()
+    .unwrap();
 
-  let mut mer_second = MerInit {
-    backend: mer_backend_in_process::InProcessInit {
-      to: to_second.into(),
-      from: from_first.into(),
-    }
-    .init()
-    .unwrap(),
-    frontend: register_second,
-    middlewares: None,
-  }
-  .init()
-  .unwrap();
+  let mut mer_second = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().to(to_second).from(from_first).build().unwrap())
+    .frontend(register_second)
+    .build()
+    .unwrap();
 
   mer_first.start().unwrap();
   mer_second.start().unwrap();

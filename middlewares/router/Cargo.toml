@@ -7,12 +7,12 @@ edition = "2018"
 [features]
 
 [dependencies]
-mer = { path = "../../mer" }
-
 anyhow = "1.0"
-thiserror = "1.0"
+derive_builder = "0.10.0-alpha"
 log = "0.4"
+mer = { path = "../../mer" }
 regex = "1"
+thiserror = "1.0"
 
 [dev-dependencies]
 mer_frontend_register = { path = "../../frontends/register" }

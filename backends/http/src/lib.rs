@@ -53,14 +53,37 @@ pub enum Error {
   #[error("could not send stoping message")]
   Shutdown,
 }
+
+#[derive(derive_builder::Builder)]
+#[builder(pattern = "owned")]
 pub struct Http {
+  #[builder(setter(into, strip_option, name = "speak_setter"), private, default = "None")]
   speak: Option<(Uri, Client<HttpConnector<GaiResolver>, Body>)>,
+
+  #[builder(setter(into, strip_option), default = "None")]
   listen: Option<SocketAddr>,
+
   #[allow(clippy::type_complexity)]
+  #[builder(private, default = "None")]
   receiver: Option<Arc<dyn Fn(Call<String>) -> Result<Reply<String>> + Send + Sync>>,
+
+  #[builder(private, default = "Runtime::new().map_err(Error::RuntimeCreation).map_err(|e| e.to_string())?")]
   runtime: Runtime,
 
+  #[builder(private, default = "None")]
   shutdown: Option<sync::oneshot::Sender<()>>,
+}
+
+impl HttpBuilder {
+  pub fn speak(self, value: Uri) -> Self {
+    self.speak_setter((value, Client::new()))
+  }
+}
+
+impl Http {
+  pub fn builder() -> HttpBuilder {
+    HttpBuilder::default()
+  }
 }
 
 impl Debug for Http {
@@ -70,52 +93,6 @@ impl Debug for Http {
       .field("listen", &self.listen)
       .field("runtime", &self.runtime)
       .finish()
-  }
-}
-
-pub struct HttpInit {
-  pub client: Option<Client<HttpConnector<GaiResolver>, Body>>,
-  pub speak: Option<Uri>,
-  pub listen: Option<SocketAddr>,
-}
-
-impl Default for HttpInit {
-  fn default() -> Self {
-    HttpInit {
-      client: None,
-      speak: None,
-      listen: None,
-    }
-  }
-}
-
-impl From<HttpInit> for Result<Http> {
-  fn from(from: HttpInit) -> Self {
-    from.init()
-  }
-}
-
-impl HttpInit {
-  pub fn init(self) -> Result<Http> {
-    trace!("initialize HttpInit");
-
-    let http = Http {
-      speak: match self.speak {
-        Some(uri) => match self.client {
-          Some(client) => (uri, client).into(),
-          None => (uri, Client::new()).into(),
-        },
-        None => None,
-      },
-      listen: self.listen,
-      receiver: None,
-      shutdown: None,
-      runtime: Runtime::new().map_err(Error::RuntimeCreation)?,
-    };
-
-    debug!("{:?}", &http);
-
-    Ok(http)
   }
 }
 
