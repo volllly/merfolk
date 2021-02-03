@@ -42,6 +42,7 @@ impl<'a, B: Backend> RegisterBuilder<'a, B> {
   where
     P: Fn(C) -> R + 'a,
   {
+    #[allow(clippy::type_complexity)]
     let mut map: HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>> = HashMap::new();
 
     value.into_iter().for_each(|p| {

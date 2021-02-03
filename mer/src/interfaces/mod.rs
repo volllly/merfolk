@@ -1,3 +1,5 @@
+//! This module contains Traits for Backends, Frontends and Middlewares.
+
 #[doc(hidden)]
 pub mod backend;
 

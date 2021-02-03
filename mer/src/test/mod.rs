@@ -68,10 +68,10 @@ impl MockFrontend {
   }
 }
 
-fn setup<'a>() -> Mer<MockBackend, MockFrontend> {
+fn setup() -> Mer<MockBackend, MockFrontend> {
   crate::MerBuilder::<MockBackend, MockFrontend>::default()
-    .backend(MockBackend {}.into())
-    .frontend(MockFrontend {}.into())
+    .backend(MockBackend {})
+    .frontend(MockFrontend {})
     .build()
     .unwrap()
 }

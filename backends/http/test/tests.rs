@@ -13,7 +13,7 @@ fn register_http() {
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let mer_caller = Mer::builder()
-    .backend(mer_backend_http::Http::builder().speak("http://localhost:8080".parse::<hyper::Uri>().unwrap().into()).build().unwrap())
+    .backend(mer_backend_http::Http::builder().speak("http://localhost:8080".parse::<hyper::Uri>().unwrap()).build().unwrap())
     .frontend(register_caller)
     .build()
     .unwrap();

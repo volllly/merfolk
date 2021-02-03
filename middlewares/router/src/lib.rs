@@ -27,7 +27,7 @@ pub struct Router<B> {
 
 impl<B> RouterBuilder<B> {
   pub fn build_boxed(self) -> std::result::Result<Box<Router<B>>, RouterBuilderError> {
-    self.build().map(|s| Box::new(s))
+    self.build().map(Box::new)
   }
 }
 

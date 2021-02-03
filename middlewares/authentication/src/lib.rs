@@ -55,7 +55,7 @@ impl<'a, B> AuthenticationBuilder<'a, B> {
   }
 
   pub fn build_boxed(self) -> std::result::Result<Box<Authentication<'a, B>>, AuthenticationBuilderError> {
-    self.build().map(|s| Box::new(s))
+    self.build().map(Box::new)
   }
 }
 

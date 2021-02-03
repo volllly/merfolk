@@ -7,7 +7,6 @@
 
 extern crate alloc;
 
-#[macro_use]
 pub mod helpers;
 
 pub mod interfaces;
@@ -25,6 +24,7 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
+/// Error type for `mer` errors. Derived from `thiserror` with `std` feature.
 pub enum Error {
   #[cfg_attr(feature = "std", error("mutex was poisoned"))]
   Lock,
@@ -46,6 +46,7 @@ impl From<Error> for anyhow::Error {
 }
 
 #[derive(Debug)]
+/// Datastructure for outgoing and incoming RPC Calls.
 pub struct Call<T> {
   pub procedure: String,
   pub payload: T,
@@ -54,6 +55,7 @@ unsafe impl<T> Send for Call<T> where T: Send {}
 unsafe impl<T> Sync for Call<T> where T: Sync {}
 
 #[derive(Debug)]
+/// Datastructure for outgoing and incoming RPC Replies.
 pub struct Reply<T> {
   pub payload: T,
 }
@@ -63,6 +65,7 @@ unsafe impl<T> Sync for Reply<T> where T: Sync {}
 #[derive(derive_builder::Builder)]
 #[cfg_attr(not(feature = "std"), builder(no_std))]
 #[builder(pattern = "owned", build_fn(skip))]
+/// RPC client and/or server type.
 pub struct Mer<B, F>
 where
   B: interfaces::Backend,

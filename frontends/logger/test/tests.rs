@@ -11,7 +11,7 @@ fn logger_in_process() {
     .unwrap();
 
   let mut mer_receiver = Mer::builder()
-    .backend(mer_backend_in_process::InProcess::builder().from(from.into()).build().unwrap())
+    .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(logger_receiver)
     .build()
     .unwrap();
