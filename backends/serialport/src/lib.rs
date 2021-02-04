@@ -12,9 +12,9 @@ use log::{debug, error, info, trace};
 #[derive(Debug, Error)]
 pub enum Error {
   #[error("serializing failed: {0}")]
-  Serialize(#[source] serde_json::Error),
+  Serialize(#[source] ron::Error),
   #[error("deserializing failed: {0}")]
-  Deserialize(#[source] serde_json::Error),
+  Deserialize(#[source] ron::Error),
   #[error("no receiver was degistered by init()")]
   NoReceiver,
   #[error("could not create runtime: {0}")]
@@ -279,7 +279,7 @@ impl Backend for SerialPort {
   fn serialize<T: serde::Serialize>(from: &T) -> Result<String> {
     trace!("serialize from");
 
-    serde_json::to_string(from).map_err(|e| Error::Serialize(e).into())
+    ron::ser::to_string(from).map_err(|e| Error::Serialize(e).into())
   }
 
   fn deserialize<'b, T>(from: &'b Self::Intermediate) -> Result<T>
@@ -288,7 +288,7 @@ impl Backend for SerialPort {
   {
     trace!("deserialize from");
 
-    serde_json::from_str(&from).map_err(|e| Error::Deserialize(e).into())
+    ron::de::from_str(&from).map_err(|e| Error::Deserialize(e).into())
   }
 }
 
