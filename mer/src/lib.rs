@@ -177,7 +177,18 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F>
     T: Fn(&mut B) -> R,
   {
     trace!("Mer.backend()");
-    Ok(access(&*match access!(self.backend) {
+    Ok(access(&mut *match access!(self.backend) {
+      Ok(backend) => backend,
+      Err(_) => return Err(Error::Lock {}),
+    }))
+  }
+
+  pub fn middlewares<T, R>(&self, access: T) -> Result<R, Error>
+  where
+    T: Fn(&mut Vec<Box<(dyn interfaces::Middleware<Backend = B>)>>) -> R,
+  {
+    trace!("Mer.backend()");
+    Ok(access(&mut *match access!(self.middlewares) {
       Ok(backend) => backend,
       Err(_) => return Err(Error::Lock {}),
     }))
