@@ -18,7 +18,7 @@ fn register_http() {
     .build()
     .unwrap();
 
-  let mut mer_receiver = Mer::builder()
+  let mer_receiver = Mer::builder()
     .backend(
       mer_backend_http::Http::builder()
         .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080))
@@ -29,7 +29,7 @@ fn register_http() {
     .build()
     .unwrap();
 
-  mer_receiver.backend(|b| b.start().unwrap());
+  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
@@ -44,7 +44,7 @@ fn register_http_duplex() {
   register_first.register("add", |(a, b)| add(a, b)).unwrap();
   register_second.register("add", |(a, b)| add(a, b)).unwrap();
 
-  let mut mer_first = Mer::builder()
+  let mer_first = Mer::builder()
     .backend(
       mer_backend_http::Http::builder()
         .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8085))
@@ -56,7 +56,7 @@ fn register_http_duplex() {
     .build()
     .unwrap();
 
-  let mut mer_second = Mer::builder()
+  let mer_second = Mer::builder()
     .backend(
       mer_backend_http::Http::builder()
         .speak("http://localhost:8085".parse::<hyper::Uri>().unwrap())
@@ -68,8 +68,8 @@ fn register_http_duplex() {
     .build()
     .unwrap();
 
-  mer_first.backend(|b| b.start().unwrap());
-  mer_second.backend(|b| b.start().unwrap());
+  mer_first.backend(|b| b.start().unwrap()).unwrap();
+  mer_second.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result_first: i32 = mer_first.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
