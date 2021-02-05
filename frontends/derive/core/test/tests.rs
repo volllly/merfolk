@@ -36,13 +36,13 @@ fn derive_in_process() {
     .build()
     .unwrap();
 
-  let mut mer_register = Mer::builder()
+  let mer_register = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(Data::builder().offset(32).build().unwrap())
     .build()
     .unwrap();
 
-  mer_register.start().unwrap();
+  mer_register.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   assert_eq!(mer_caller.frontend(|f| { f.add(a, b).unwrap() }).unwrap(), a + b);
@@ -78,7 +78,7 @@ fn derive_http() {
     .build()
     .unwrap();
 
-  let mut mer_register = Mer::builder()
+  let mer_register = Mer::builder()
     .backend(
       mer_backend_http::Http::builder()
         .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8083))
@@ -89,7 +89,7 @@ fn derive_http() {
     .build()
     .unwrap();
 
-  mer_register.start().unwrap();
+  mer_register.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   assert_eq!(mer_caller.frontend(|f| { f.add(a, b).unwrap() }).unwrap(), a + b);

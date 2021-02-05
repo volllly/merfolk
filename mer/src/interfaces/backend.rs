@@ -25,11 +25,6 @@ pub trait Backend: Send {
   /// The Intermediate type required by the [`Backend`].
   type Intermediate: serde::Serialize + for<'a> serde::Deserialize<'a>;
 
-  /// Starts the [`Backend`]. Can be optional.
-  fn start(&mut self) -> Result<()>;
-  /// Stops the [`Backend`]. Can be optional.
-  fn stop(&mut self) -> Result<()>;
-
   /// Registers the server callback function from [`Mer`](crate::Mer). The callback is used to pass incomming [`Call`](crate::Call)s to the [`Frontend`](crate::interfaces::Frontend).
   fn register<T>(&mut self, receiver: T) -> Result<()>
   where

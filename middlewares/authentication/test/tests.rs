@@ -30,7 +30,7 @@ fn authentication_register_in_process() {
     .build()
     .unwrap();
 
-  let mut mer_receiver = Mer::builder()
+  let mer_receiver = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(register_receiver)
     .middlewares(vec![mer_middleware_authentication::Authentication::builder()
@@ -47,7 +47,7 @@ fn authentication_register_in_process() {
     .build()
     .unwrap();
 
-  mer_receiver.start().unwrap();
+  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
@@ -79,7 +79,7 @@ fn authentication_register_in_process_failing() {
     .build()
     .unwrap();
 
-  let mut mer_receiver = Mer::builder()
+  let mer_receiver = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(register_receiver)
     .middlewares(vec![mer_middleware_authentication::Authentication::builder()
@@ -96,7 +96,7 @@ fn authentication_register_in_process_failing() {
     .build()
     .unwrap();
 
-  mer_receiver.start().unwrap();
+  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let _: () = mer_caller.frontend(|f| f.call("not_allowed", &()).unwrap()).unwrap();
 }

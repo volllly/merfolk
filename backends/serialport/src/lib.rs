@@ -76,10 +76,8 @@ struct SelfReply {
   payload: String,
 }
 
-impl Backend for SerialPort {
-  type Intermediate = String;
-
-  fn start(&mut self) -> Result<()> {
+impl SerialPort {
+  pub fn start(&mut self) -> Result<()> {
     trace!("start SerialPort Backend");
 
     if self.handle.is_some() {
@@ -201,7 +199,7 @@ impl Backend for SerialPort {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<()> {
+  pub fn stop(&mut self) -> Result<()> {
     trace!("stop serialport backend");
     match &self.handle {
       None => Err(Error::NotStarted.into()),
@@ -211,6 +209,9 @@ impl Backend for SerialPort {
       }
     }
   }
+}
+impl Backend for SerialPort {
+  type Intermediate = String;
 
   fn register<T>(&mut self, receiver: T) -> Result<()>
   where

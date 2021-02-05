@@ -161,22 +161,12 @@ impl<B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
 }
 
 impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
-  pub fn start(&mut self) -> Result<()> {
-    trace!("Mer.start()");
-    access!(self.backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.start()
-  }
-
-  pub fn stop(&mut self) -> Result<()> {
-    trace!("Mer.stop()");
-    access!(self.backend).map_err::<anyhow::Error, _>(|_| Error::Lock.into())?.stop()
-  }
-
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>
   where
-    T: Fn(&F) -> R,
+    T: Fn(&mut F) -> R,
   {
     trace!("Mer.frontend()");
-    Ok(access(&*match access!(self.frontend) {
+    Ok(access(&mut *match access!(self.frontend) {
       Ok(frontend) => frontend,
       Err(_) => return Err(Error::Lock {}),
     }))
@@ -184,7 +174,7 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F>
 
   pub fn backend<T, R>(&self, access: T) -> Result<R, Error>
   where
-    T: Fn(&B) -> R,
+    T: Fn(&mut B) -> R,
   {
     trace!("Mer.backend()");
     Ok(access(&*match access!(self.backend) {

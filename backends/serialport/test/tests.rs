@@ -167,20 +167,20 @@ fn register_serialport() {
     s: Box::new(pairs.0 .1),
   };
 
-  let mut mer_caller = Mer::builder()
+  let mer_caller = Mer::builder()
     .backend(mer_backend_serialport::SerialPort::builder().port(port_caller).build().unwrap())
     .frontend(register_caller)
     .build()
     .unwrap();
 
-  let mut mer_receiver = Mer::builder()
+  let mer_receiver = Mer::builder()
     .backend(mer_backend_serialport::SerialPort::builder().port(port_receiver).build().unwrap())
     .frontend(register_receiver)
     .build()
     .unwrap();
 
-  mer_caller.start().unwrap();
-  mer_receiver.start().unwrap();
+  mer_caller.backend(|b| b.start().unwrap()).unwrap();
+  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();

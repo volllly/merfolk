@@ -72,10 +72,8 @@ impl InProcess {
   }
 }
 
-impl Backend for InProcess {
-  type Intermediate = String;
-
-  fn start(&mut self) -> Result<()> {
+impl InProcess {
+  pub fn start(&mut self) -> Result<()> {
     trace!("start InProcess");
 
     if self.handle.is_some() {
@@ -101,7 +99,7 @@ impl Backend for InProcess {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<()> {
+  pub fn stop(&mut self) -> Result<()> {
     trace!("stop InProcess");
 
     match &self.handle {
@@ -112,6 +110,12 @@ impl Backend for InProcess {
       }
     }
   }
+}
+
+impl Backend for InProcess {
+  type Intermediate = String;
+
+
 
   fn register<T>(&mut self, receiver: T) -> Result<()>
   where

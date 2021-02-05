@@ -29,7 +29,7 @@ fn register_http() {
     .build()
     .unwrap();
 
-  mer_receiver.start().unwrap();
+  mer_receiver.backend(|b| b.start().unwrap());
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
@@ -68,8 +68,8 @@ fn register_http_duplex() {
     .build()
     .unwrap();
 
-  mer_first.start().unwrap();
-  mer_second.start().unwrap();
+  mer_first.backend(|b| b.start().unwrap());
+  mer_second.backend(|b| b.start().unwrap());
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result_first: i32 = mer_first.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();

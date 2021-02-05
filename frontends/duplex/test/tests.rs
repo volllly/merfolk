@@ -30,13 +30,13 @@ fn duplex_in_process_duplex() {
   let (to_first, from_first): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = mpsc::channel(1);
   let (to_second, from_second): (Sender<mer_backend_in_process::InProcessChannel>, Receiver<mer_backend_in_process::InProcessChannel>) = mpsc::channel(1);
 
-  let mut mer_first = Mer::builder()
+  let mer_first = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().to(to_first).from(from_second).build().unwrap())
     .frontend(mer_frontend_duplex::Duplex::builder().caller(register_first_caller).receiver(register_first_receiver).build().unwrap())
     .build()
     .unwrap();
 
-  let mut mer_second = Mer::builder()
+  let mer_second = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().to(to_second).from(from_first).build().unwrap())
     .frontend(
       mer_frontend_duplex::Duplex::builder()
@@ -48,8 +48,8 @@ fn duplex_in_process_duplex() {
     .build()
     .unwrap();
 
-  mer_first.start().unwrap();
-  mer_second.start().unwrap();
+  mer_first.backend(|b| b.start().unwrap()).unwrap();
+  mer_second.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result_first: i32 = mer_first.frontend(|f| f.caller.call("add", &(a, b)).unwrap()).unwrap();

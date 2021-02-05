@@ -15,12 +15,6 @@ struct MockBackend {}
 impl Backend for MockBackend {
   type Intermediate = String;
 
-  fn start(&mut self) -> Result<()> {
-    Ok(())
-  }
-  fn stop(&mut self) -> Result<()> {
-    Ok(())
-  }
 
   fn register<T>(&mut self, _receiver: T) -> Result<()>
   where
@@ -79,16 +73,6 @@ fn setup() -> Mer<MockBackend, MockFrontend> {
 #[test]
 fn init() {
   setup();
-}
-
-#[test]
-fn start() {
-  setup().start().unwrap()
-}
-
-#[test]
-fn stop() {
-  setup().stop().unwrap()
 }
 
 #[test]

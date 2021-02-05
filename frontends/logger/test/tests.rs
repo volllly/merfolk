@@ -10,13 +10,13 @@ fn logger_in_process() {
     .build()
     .unwrap();
 
-  let mut mer_receiver = Mer::builder()
+  let mer_receiver = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(logger_receiver)
     .build()
     .unwrap();
 
-  mer_receiver.start().unwrap();
+  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let logger_caller = mer_frontend_logger::Logger::builder()
     .level(log::Level::Trace)

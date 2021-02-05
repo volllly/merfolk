@@ -96,10 +96,8 @@ impl Debug for Http {
   }
 }
 
-impl Backend for Http {
-  type Intermediate = String;
-
-  fn start(&mut self) -> Result<()> {
+impl Http {
+  pub fn start(&mut self) -> Result<()> {
     trace!("start Http Backend");
 
     if self.shutdown.is_some() {
@@ -177,10 +175,14 @@ impl Backend for Http {
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<()> {
+  pub fn stop(&mut self) -> Result<()> {
     trace!("stop http backend");
     self.shutdown.take().ok_or(Error::NotStarted)?.send(()).map_err(|_| Error::Shutdown.into())
   }
+}
+
+impl Backend for Http {
+  type Intermediate = String;
 
   fn register<T>(&mut self, receiver: T) -> Result<()>
   where
