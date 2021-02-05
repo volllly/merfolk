@@ -3,23 +3,23 @@ use anyhow::Result;
 /// The [`Backend`] is responsible for sending and receiving RPCs.
 /// The [`Backend`] serializes and deserializes the packages and sends and reveices them over a chsen channel.
 ///
-/// # Incomming
+/// # Incomming RPCs
 /// The [`Backend`] is acting as server.
 ///
 /// Incomming calls from the client are passed on to the [`Frontend`](crate::interfaces::Frontend) as [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`.
 /// The [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`s from the [`Frontend`](crate::interfaces::Frontend) are sent back to the client.
 ///
-/// # Outgoing
+/// # Outgoing RPCs
 /// The [`Backend`] is acting as client.
 ///
 /// The [`Frontend`](crate::interfaces::Frontend) passes [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`s to the [`Backend`] which sends them to the server.
-/// The replies are received from the server and passed on to the [`Frontend`](crate::interfaces::Frontend) as [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`.
+/// The replies are received from the server and passed on to the [`Frontend`](crate::interfaces::Frontend) as [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`s.
 ///
 /// # Examples
 /// For examples look at the provided [`Backend`]s:
-/// * [`Http`](mer_backend_http::Http)
-/// * [`InProcess`](mer_backend_in_process::InProcess)
-/// * [`SerialPort`](mer_backend_serialport::SerialPort)
+/// * [`Http`](mer_backend_http)
+/// * [`InProcess`](mer_backend_in_process)
+/// * [`SerialPort`](mer_backend_serialport)
 
 pub trait Backend: Send {
   /// The Intermediate type required by the [`Backend`].

@@ -5,14 +5,14 @@ use anyhow::Result;
 /// The [`Frontend`] is responsible for processing incomming RPCs and for passing on outgoing RPCs to the [`Backend`].
 /// The [`Frontend`] provides a way to make calls on the client side and a way to register procedures on the server side.
 ///
-/// # Incomming
+/// # Incomming RPCs
 /// The [`Frontend`] is acting as server.
 ///
 /// Incomming [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`s are received from the [`Backend`].
 /// The calls are deserialized via [`Backend::deserialize`](crate::interfaces::Backend::deserialize) to the correct type.
 /// The calls are processed and the replys serialized via [`Backend::serialize`](crate::interfaces::Backend::serialize) and pased on to the [`Backend`] as [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`.
 ///
-/// # Outgoing
+/// # Outgoing RPCs
 /// The [`Frontend`] is acting as client.
 ///
 /// The [`Frontend`] serializes the calls via [`Backend::serialize`](crate::interfaces::Backend::serialize)
@@ -22,8 +22,9 @@ use anyhow::Result;
 /// # Examples
 /// For examples look at the provided [`Frontend`]s:
 /// * [`Derive`](mer_frontend_derive)
-/// * [`Logger`](mer_frontend_logger::Logger)
-/// * [`Register`](mer_frontend_register::Register)
+/// * [`Logger`](mer_frontend_logger)
+/// * [`Register`](mer_frontend_register)
+
 pub trait Frontend: Send {
   /// The used  [`Backend`].
   type Backend: Backend;
