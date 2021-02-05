@@ -3,7 +3,7 @@ use super::Backend;
 use anyhow::Result;
 
 /// [`Middleware`]s are used to Modify RPCs or to add extra functionality to the framework.
-/// 
+///
 /// # Outgoing RPCs
 /// The outgoing [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`s are processed by the [`wrap_call`](Middleware::wrap_call) function and passed on.
 /// The incomming [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`s are processed by the [`unwrap_reply`](Middleware::unwrap_reply) function and passed on.

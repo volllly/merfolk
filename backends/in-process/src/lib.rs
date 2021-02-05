@@ -115,8 +115,6 @@ impl InProcess {
 impl Backend for InProcess {
   type Intermediate = String;
 
-
-
   fn register<T>(&mut self, receiver: T) -> Result<()>
   where
     T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,

@@ -15,7 +15,6 @@ struct MockBackend {}
 impl Backend for MockBackend {
   type Intermediate = String;
 
-
   fn register<T>(&mut self, _receiver: T) -> Result<()>
   where
     T: Fn(Call<Self::Intermediate>) -> Result<Reply<Self::Intermediate>> + Send + Sync + 'static,

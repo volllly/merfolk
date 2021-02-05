@@ -1,9 +1,26 @@
 #![doc(issue_tracker_base_url = "https://github.com/volllly/mer/issues/")]
 #![doc(html_root_url = "https://github.com/volllly/mer")]
-#![doc(test(no_crate_inject))]
 //#[doc(include = "../README.md")]
 //#[doc = include_str!("../../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
+
+//! [`mer`](crate) is a **m**inimal **e**xtensible **r**emote procedure call framework.
+//!
+//! [`mer`](crate) consists of a [`Backend`], [`Frontend`] and optional [`Middleware`]s.
+//!
+//! ## [`Backend`]
+//! The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`] this can happen over different channels (e.g. http, serialport, etc.).
+//! The [`Backend`] serializes and deserializes the RPCs using the [`serde`] framework.
+//!
+//! ## Frontend
+//! The [`Frontend`] is providing an API to make RPCs and to receive them.
+//!
+//! ## Middleware
+//! A [`Middleware`] can modify sent and received RPCs and replies.
+//!
+//! [`Backend`]: interfaces::Backend
+//! [`Frontend`]: interfaces::Frontend
+//! [`Middleware`]: interfaces::Middleware
 
 extern crate alloc;
 
@@ -66,6 +83,8 @@ unsafe impl<T> Sync for Reply<T> where T: Sync {}
 #[cfg_attr(not(feature = "std"), builder(no_std))]
 #[builder(pattern = "owned", build_fn(skip))]
 /// RPC client and/or server type.
+///
+/// Container for [`Backend`](interfaces::Backend), [`Frontend`](interfaces::Frontend) and [`Middleware`](interfaces::Middleware)s.
 pub struct Mer<B, F>
 where
   B: interfaces::Backend,
@@ -100,6 +119,9 @@ where
     self.middlewares_setter(smart_lock!(value))
   }
 
+  /// Builds a new [`Mer`].
+  ///
+  /// Registers the [`Backend`](interfaces::Backend), [`Frontend`](interfaces::Frontend) and [`Middleware`](interfaces::Middleware)s.
   pub fn build(self) -> Result<Mer<B, F>> {
     trace!("MerBuilder.build()");
 
@@ -154,6 +176,7 @@ where
   }
 }
 
+/// Returns a new [`MerBuilder`]
 impl<B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
   pub fn builder() -> MerBuilder<B, F> {
     MerBuilder::default()
@@ -161,6 +184,19 @@ impl<B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
 }
 
 impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
+  /// Allows accessing the [`Frontend`](interfaces::Frontend).
+  ///
+  /// ```no_run
+  /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+  /// # fn main() {
+  /// #   let mer = mer::Mer::builder()
+  /// #     .backend(mer_backend_http::Http::builder().build().unwrap())
+  /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  /// #     .build()
+  /// #     .unwrap();
+  ///     let result: i32 = mer.frontend(|f| f.call("add", &(1, 2)).unwrap()).unwrap();
+  /// # }
+  /// ```
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>
   where
     T: Fn(&mut F) -> R,
@@ -172,23 +208,25 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F>
     }))
   }
 
+  /// Allows accessing the [`Backend`](interfaces::Backend).
+  ///
+  /// ```no_run
+  /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+  /// # fn main() {
+  /// #   let mer = mer::Mer::builder()
+  /// #     .backend(mer_backend_http::Http::builder().build().unwrap())
+  /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  /// #     .build()
+  /// #     .unwrap();
+  ///     mer.backend(|b| b.start().unwrap()).unwrap();
+  /// # }
+  /// ```
   pub fn backend<T, R>(&self, access: T) -> Result<R, Error>
   where
     T: Fn(&mut B) -> R,
   {
     trace!("Mer.backend()");
     Ok(access(&mut *match access!(self.backend) {
-      Ok(backend) => backend,
-      Err(_) => return Err(Error::Lock {}),
-    }))
-  }
-
-  pub fn middlewares<T, R>(&self, access: T) -> Result<R, Error>
-  where
-    T: Fn(&mut Vec<Box<(dyn interfaces::Middleware<Backend = B>)>>) -> R,
-  {
-    trace!("Mer.backend()");
-    Ok(access(&mut *match access!(self.middlewares) {
       Ok(backend) => backend,
       Err(_) => return Err(Error::Lock {}),
     }))

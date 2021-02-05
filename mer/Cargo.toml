@@ -18,6 +18,17 @@ serde = { version = "1.0.116", default-features = false, features = ["alloc"] }
 spin = "0.7.0"
 thiserror = { version = "1.0", optional = true }
 
+serde_json = "1.0.57"
 [dev-dependencies]
 serde_json = "1.0.57"
 rand = "0.8"
+
+# [doc-dependencies]
+mer_backend_http = { path = "../backends/http" }
+mer_backend_in_process = { path = "../backends/in-process" }
+mer_backend_serialport = { path = "../backends/serialport" }
+
+mer_frontend_derive = { path = "../frontends/derive/core" }
+mer_frontend_register = { path = "../frontends/register" }
+mer_frontend_duplex = { path = "../frontends/duplex" }
+mer_frontend_logger = { path = "../frontends/logger" }
