@@ -40,6 +40,11 @@ jobs:
           command: clippy
           args: -- -D warnings
  
+      - name: Run cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc --no-deps
+
   check:
     name: Check
     runs-on: ubuntu-latest
