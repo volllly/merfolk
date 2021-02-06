@@ -48,9 +48,6 @@ fn duplex_in_process_duplex() {
     .build()
     .unwrap();
 
-  mer_first.backend(|b| b.start().unwrap()).unwrap();
-  mer_second.backend(|b| b.start().unwrap()).unwrap();
-
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result_first: i32 = mer_first.frontend(|f| f.caller.call("add", &(a, b)).unwrap()).unwrap();
   let result_second: i32 = mer_second.frontend(|f| f.caller.call("sub", &(a, b)).unwrap()).unwrap();

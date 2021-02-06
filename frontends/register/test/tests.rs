@@ -27,13 +27,11 @@ fn register_in_process() {
     .build()
     .unwrap();
 
-  let mer_receiver = Mer::builder()
+  let _mer_receiver = Mer::builder()
     .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(register_receiver)
     .build()
     .unwrap();
-
-  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
@@ -53,7 +51,7 @@ fn register_http() {
     .build()
     .unwrap();
 
-  let mer_receiver = Mer::builder()
+  let _mer_receiver = Mer::builder()
     .backend(
       mer_backend_http::Http::builder()
         .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8082))
@@ -63,8 +61,6 @@ fn register_http() {
     .frontend(register_receiver)
     .build()
     .unwrap();
-
-  mer_receiver.backend(|b| b.start().unwrap()).unwrap();
 
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();

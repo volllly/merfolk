@@ -197,6 +197,16 @@ impl Backend for Http {
       receiver(call)
     }));
 
+    if let Some(err) = self.start().err().map(|e| e.downcast::<Error>()) {
+      match err {
+        Ok(err) => match err {
+          Error::AlreadyStarted | Error::NoListen | Error::NoReceiver => {}
+          err => return Err(err.into())
+        },
+        Err(err) => return Err(err)
+      }
+    };
+
     Ok(())
   }
 

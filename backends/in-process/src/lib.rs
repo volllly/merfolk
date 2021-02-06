@@ -122,6 +122,9 @@ impl Backend for InProcess {
     trace!("register receiver");
 
     self.receiver = Some(Arc::new(move |call: Call<String>| receiver(call)));
+
+    self.start().ok();
+
     Ok(())
   }
 

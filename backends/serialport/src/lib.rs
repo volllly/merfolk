@@ -226,6 +226,8 @@ impl Backend for SerialPort {
       receiver(call)
     }));
 
+    self.start().ok();
+
     Ok(())
   }
 
