@@ -10,7 +10,7 @@ use anyhow::Result;
 ///
 /// Incomming [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`s are received from the [`Backend`].
 /// The calls are deserialized via [`Backend::deserialize`](crate::interfaces::Backend::deserialize) to the correct type.
-/// The calls are processed and the replys serialized via [`Backend::serialize`](crate::interfaces::Backend::serialize) and pased on to the [`Backend`] as [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`.
+/// The calls are processed and the replys serialized via [`Backend::serialize`](crate::interfaces::Backend::serialize) and passed on to the [`Backend`] as [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`.
 ///
 /// # Outgoing RPCs
 /// The [`Frontend`] is acting as client.
@@ -21,9 +21,9 @@ use anyhow::Result;
 ///
 /// # Examples
 /// For examples look at the provided [`Frontend`]s:
-/// * [`Derive`](mer_frontend_derive)
-/// * [`Logger`](mer_frontend_logger)
-/// * [`Register`](mer_frontend_register)
+/// * [`Derive`](/mer_frontend_derive)
+/// * [`Logger`](/mer_frontend_logger)
+/// * [`Register`](/mer_frontend_register)
 
 pub trait Frontend: Send {
   /// The used  [`Backend`].

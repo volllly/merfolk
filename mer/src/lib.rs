@@ -20,7 +20,7 @@
 //!
 //! # Use [`mer`]
 //! [`mer`] needs a [`Backend`] and a [`Frontend`] to operate.
-//! The following examples uses the [`Http`](mer_backend_http) [`Backend`] and the [`Register`](mer_frontend_register) [`Frontend`] (see their documentation on how to use them).
+//! The following examples uses the [`Http`](/mer_backend_http) [`Backend`] and the [`Register`](/mer_frontend_register) [`Frontend`] (see their documentation on how to use them).
 //!
 //! How to use [`mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
 //!
@@ -95,10 +95,73 @@
 //! # }
 //! ```
 //!
+//! # Advanced
+//! ```no_run
+//! # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+//! # use mer::Mer;
+//! # use mer_backend_http::Http;
+//! # use mer_frontend_register::Register;
+//! # use mer_frontend_derive::frontend;
+//! # use mer_frontend_duplex::Duplex;
+//! # use mer_middleware_router::Router;
+//! # fn main() {
+//! // remote procedure definitions for server
+//! #[frontend()]
+//! struct Receiver {}
 //!
-//! # Write a [`Backend`]
-//! # Write a [`Frontend`]
-//! # Write a [`Middleware`]
+//! #[frontend(target = "Receiver")]
+//! trait Definition {
+//!   fn some_function(arg: String) {}
+//! }
+//!
+//! // build the backend
+//! let backend = Http::builder()
+//!   // configure backend as client
+//!   .speak("http://localhost:8080".parse::<hyper::Uri>().unwrap())
+//!   // configure backend as server
+//!   .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081))
+//!   .build()
+//!   .unwrap();
+//!
+//! // build the client frontend
+//! let caller = Register::builder().build().unwrap();
+//!
+//! // build the server frontend
+//! let receiver = Receiver::builder().build().unwrap();
+//!
+//! // combine the frontends using the [`Duplex`](/mer_frontend_derive) frontend
+//! let frontend = Duplex::builder().caller(caller).receiver(receiver).build().unwrap();
+//!
+//! // build router middleware
+//! let middleware = Router::builder().routes(vec![("prefix_(.*)".to_string(), "$1".to_string())]).build_boxed().unwrap();
+//!
+//! // build mer instance acting as client and server
+//! let mer = Mer::builder().backend(backend).frontend(frontend).middlewares(vec![middleware]).build().unwrap();
+//!
+//! // call remote procedures via the caller frontend
+//! let result: String = mer.frontend(|f| f.caller.call("some_remote_function", &()).unwrap()).unwrap();
+//! # }
+//! ```
+//!
+//! # Provided Modules
+//! | Type           | Name                                              | Description |
+//! |----------------|---------------------------------------------------|---|
+//! | [`Backend`]    | [`Http`](/mer_backend_http)                        | Communicates via Http and in `json` format.                                                                              |
+//! | [`Backend`]    | [`InProcess`](/mer_backend_in_process)             | Communicates via [`tokio`](tokio) [`channels`](tokio::sync::mpsc::channel) in `json` format (mostly used for testing purposes). |
+//! | [`Backend`]    | [`SerialPort`](/mer_backend_serialport)            | Communicates via Serialport (using the [`serialport`](serialport) library) in [`ron`](ron) format.                                          |
+//! | [`Frontend`]   | [`Derive`](/mer_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
+//! | [`Frontend`]   | [`Duplex`](/mer_frontend_derive)                   | Allows for different frontens for calling and receiving RPCs.                                                            |
+//! | [`Frontend`]   | [`Logger`](/mer_frontend_derive)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
+//! | [`Frontend`]   | [`Register`](/mer_frontend_derive)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
+//! | [`Middleware`] | [`Authentication`](/mer_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
+//! | [`Middleware`] | [`Router`](/mer_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
+//!
+//!
+//!
+//! # Develop a Module for [`mer`]
+//! If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`], [`Frontend`] or [`Middleware`] trait.
+//!
+//! For examples please see the [provided modules](#provided-modules)
 //!
 //! [`Backend`]: interfaces::Backend
 //! [`Frontend`]: interfaces::Frontend
@@ -159,7 +222,7 @@ unsafe impl<T> Send for Call<T> where T: Send {}
 unsafe impl<T> Sync for Call<T> where T: Sync {}
 
 #[derive(Debug)]
-/// Datastructure for outgoing and incoming RPC Replies.
+/// Data structure for outgoing and incoming RPC Replies.
 pub struct Reply<T> {
   pub payload: T,
 }

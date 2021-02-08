@@ -13,9 +13,9 @@ use anyhow::Result;
 /// The outgoing [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`s are processed by the [`wrap_reply`](Middleware::wrap_reply) function and passed on.
 ///
 /// # Examples
-/// For examples look at the provided [Middlewares](Middleware):
-/// * [`Authentication`](mer_middleware_authentication)
-/// * [`Router`](mer_middleware_router)
+/// For examples look at the provided [`Middleware`]s:
+/// * [`Authentication`](/mer_middleware_authentication)
+/// * [`Router`](/mer_middleware_router)
 
 pub trait Middleware: Send {
   type Backend: Backend;
@@ -32,5 +32,8 @@ pub trait Middleware: Send {
   /// Unwraps the imcomming reply [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`
   fn unwrap_reply(&self, reply: Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>;
 
+  /// return self as Any. Needed for downcasting when accessing a Middleware through [`Mer`](crate::Mer).
+  ///
+  /// implement like this `fn as_any(&mut self) -> &mut dyn core::any::Any { self }`
   fn as_any(&mut self) -> &mut dyn core::any::Any;
 }

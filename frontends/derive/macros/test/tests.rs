@@ -25,22 +25,18 @@ fn test_generic() {
   }
 }
 
-
 #[test]
 fn test() {
   #[frontend]
   struct Data {}
 
   #[frontend(target = "Data")]
-  trait Service
-  {
+  trait Service {
     fn add(a: i32, b: i32) -> i32 {
       a + b
     }
 
-    fn empty() {
-
-    }
+    fn empty() {}
 
     fn itentity(a: i32) -> i32 {
       a
@@ -48,17 +44,15 @@ fn test() {
   }
 }
 
-
 #[test]
 fn test_with_data() {
   #[frontend]
   struct Data {
-    pub offset: i32
+    pub offset: i32,
   }
 
   #[frontend(target = "Data")]
-  trait Service
-  {
+  trait Service {
     fn add(a: i32, b: i32) -> i32 {
       a + b
     }

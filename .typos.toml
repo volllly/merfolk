@@ -1,0 +1,3 @@
+[default]
+check-file = true
+locale = "en"

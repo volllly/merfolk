@@ -5,3 +5,5 @@ merge_imports = true
 format_code_in_doc_comments = true
 normalize_comments = true
 normalize_doc_attributes = true
+
+edition = "2018"
