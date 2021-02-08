@@ -38,24 +38,12 @@ pub struct Register<'a, B: Backend> {
 }
 
 impl<'a, B: Backend> RegisterBuilder<'a, B> {
-  pub fn procedures<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(self, value: HashMap<&'a str, P>) -> Self
-  where
-    P: Fn(C) -> R + 'a,
-  {
-    #[allow(clippy::type_complexity)]
-    let mut map: HashMap<String, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>> = HashMap::new();
-
-    value.into_iter().for_each(|p| {
-      map.insert(
-        p.0.to_string(),
-        Box::new(move |call: Call<B::Intermediate>| {
-          let reply = p.1(B::deserialize::<C>(&call.payload)?);
-          Ok(Reply { payload: B::serialize::<R>(&reply)? })
-        }),
-      );
-    });
-
-    self.procedures_setter(Arc::new(Mutex::new(map)))
+  #[allow(clippy::type_complexity)]
+  pub fn procedures(self, value: HashMap<&'a str, Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>>) -> Self {
+    self.procedures_setter(Arc::new(Mutex::new(value.into_iter().fold(HashMap::new(), |mut acc, p| {
+      acc.insert(p.0.to_string(), p.1);
+      acc
+    }))))
   }
 }
 
@@ -68,6 +56,17 @@ impl<'a, B: Backend> Register<'a, B> {
 unsafe impl<'a, T: Backend> Send for Register<'a, T> {}
 
 impl<'a, B: Backend> Register<'a, B> {
+  #[allow(clippy::type_complexity)]
+  pub fn make_procedure<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(procedure: P) -> Box<dyn Fn(Call<B::Intermediate>) -> Result<Reply<B::Intermediate>> + 'a>
+  where
+    P: Fn(C) -> R + 'a,
+  {
+    Box::new(move |call: Call<B::Intermediate>| {
+      let reply = procedure(B::deserialize::<C>(&call.payload)?);
+      Ok(Reply { payload: B::serialize::<R>(&reply)? })
+    })
+  }
+
   pub fn register<P, C: for<'de> serde::Deserialize<'de>, R: serde::Serialize>(&self, name: &str, procedure: P) -> Result<()>
   where
     P: Fn(C) -> R + 'a,

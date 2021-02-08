@@ -1,4 +1,6 @@
 use mer::*;
+use mer_backend_in_process::InProcess;
+use mer_frontend_register::Register;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 fn add(a: i32, b: i32) -> i32 {
@@ -14,7 +16,7 @@ fn register_in_process() {
 
   let register_caller = mer_frontend_register::Register::builder().build().unwrap();
   let register_receiver = mer_frontend_register::Register::builder()
-    .procedures(vec![("add", |(a, b)| add(a, b))].into_iter().collect())
+    .procedures(vec![("add", Register::<InProcess>::make_procedure(|(a, b)| add(a, b)))].into_iter().collect())
     .build()
     .unwrap();
   register_caller.register("add", |(a, b)| add(a, b)).unwrap();
