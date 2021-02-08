@@ -22,11 +22,16 @@ pub trait Middleware: Send {
 
   ///Wraps the outgoing call [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`
   fn wrap_call(&self, call: Result<crate::Call<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Call<<Self::Backend as Backend>::Intermediate>>;
+
   ///Wraps the outgoing reply [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`
   fn wrap_reply(&self, call: Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>;
 
+
   ///Unwraps the incomming call [`Call`](crate::Call)<[`Intermediate`](Backend::Intermediate)`>`
   fn unwrap_call(&self, reply: Result<crate::Call<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Call<<Self::Backend as Backend>::Intermediate>>;
+
   ///Unwraps the imcomming reply [`Reply`](crate::Reply)<[`Intermediate`](Backend::Intermediate)`>`
   fn unwrap_reply(&self, reply: Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>;
+
+  fn as_any(&mut self) -> &mut dyn core::any::Any;
 }

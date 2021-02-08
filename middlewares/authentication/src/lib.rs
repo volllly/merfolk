@@ -71,7 +71,7 @@ struct Intermediate<B: Backend> {
   payload: B::Intermediate,
 }
 
-impl<'a, B: Backend> Middleware for Authentication<'a, B> {
+impl<'staic, B: Backend + 'static> Middleware for Authentication<'static, B> {
   type Backend = B;
 
   fn wrap_call(&self, call: Result<crate::Call<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Call<<Self::Backend as Backend>::Intermediate>> {
@@ -123,5 +123,9 @@ impl<'a, B: Backend> Middleware for Authentication<'a, B> {
 
   fn unwrap_reply(&self, reply: Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Reply<<Self::Backend as Backend>::Intermediate>> {
     reply
+  }
+
+  fn as_any(&mut self) -> &mut dyn core::any::Any {
+    self
   }
 }

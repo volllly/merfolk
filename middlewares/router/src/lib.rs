@@ -37,7 +37,7 @@ impl<B> Router<B> {
   }
 }
 
-impl<B: Backend> Middleware for Router<B> {
+impl<B: Backend + 'static> Middleware for Router<B> {
   type Backend = B;
 
   fn wrap_call(&self, call: Result<crate::Call<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Call<<Self::Backend as Backend>::Intermediate>> {
@@ -70,5 +70,9 @@ impl<B: Backend> Middleware for Router<B> {
 
   fn unwrap_reply(&self, reply: Result<crate::Reply<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Reply<<Self::Backend as Backend>::Intermediate>> {
     reply
+  }
+
+  fn as_any(&mut self) -> &mut dyn core::any::Any {
+    self
   }
 }

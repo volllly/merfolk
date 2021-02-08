@@ -32,3 +32,7 @@ mer_frontend_derive = { path = "../frontends/derive/core" }
 mer_frontend_register = { path = "../frontends/register" }
 mer_frontend_duplex = { path = "../frontends/duplex" }
 mer_frontend_logger = { path = "../frontends/logger" }
+
+mer_middleware_authentication = { path = "../middlewares/authentication" }
+
+hyper = { version = "0.14", features = ["client", "server", "tcp"] }

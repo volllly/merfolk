@@ -51,7 +51,7 @@ fn router_authentication_register_in_process() {
     ])
     .build()
     .unwrap();
-
+  
   let (a, b) = (rand::random::<i32>() / 2, rand::random::<i32>() / 2);
   let result_add: i32 = mer_caller.frontend(|f| f.call("add", &(a, b)).unwrap()).unwrap();
   let result_math_add: i32 = mer_caller.frontend(|f| f.call("math_add", &(a, b)).unwrap()).unwrap();

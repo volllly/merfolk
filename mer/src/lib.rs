@@ -53,6 +53,10 @@ pub enum Error {
   },
   #[cfg_attr(feature = "std", error("{0} must be initialized"))]
   Init(String),
+  #[cfg_attr(feature = "std", error("middleware at index {0} not found"))]
+  MiddlewareIndex(usize),
+  #[cfg_attr(feature = "std", error("middleware could not be downcast"))]
+  DowncastError,
 }
 
 #[cfg(not(feature = "std"))]
@@ -100,7 +104,7 @@ where
   middlewares: SmartLock<Vec<Box<dyn interfaces::Middleware<Backend = B>>>>,
 }
 
-impl<'a, B, F> MerBuilder<B, F>
+impl<B, F> MerBuilder<B, F>
 where
   B: interfaces::Backend,
   B: 'static,
@@ -183,7 +187,7 @@ impl<B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
   }
 }
 
-impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
+impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer<B, F> {
   /// Allows accessing the [`Frontend`](interfaces::Frontend).
   ///
   /// ```no_run
@@ -230,5 +234,43 @@ impl<'a, B: interfaces::Backend, F: interfaces::Frontend<Backend = B>> Mer<B, F>
       Ok(backend) => backend,
       Err(_) => return Err(Error::Lock {}),
     }))
+  }
+
+  /**
+  Allows accessing the [`Middleware`](interfaces::Middleware)s.
+
+  ```no_run
+  # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+  # use mer_backend_http::Http;
+  # use mer_middleware_authentication::Authentication;
+  # fn main() {
+  #   let mer = mer::Mer::builder()
+  #     .backend(mer_backend_http::Http::builder().build().unwrap())
+  #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  #     .middlewares(vec![Authentication::builder().auth(("user".into(), "pwd".into())).build_boxed().unwrap()])
+  #     .build()
+  #     .unwrap();
+  mer.middlewares(0, |_m: &mut Authentication<Http>| {}).unwrap();
+  # }
+  ```
+  */
+  pub fn middlewares<M, T, R>(&self, index: usize, access: T) -> Result<R, Error>
+  where
+    M: interfaces::Middleware<Backend = B> + 'static,
+    T: Fn(&mut M) -> R,
+  {
+    trace!("Mer.backend()");
+
+    let mut lock = access!(self.middlewares).map_err(|_| Error::Lock)?;
+
+    if index >= lock.len() {
+      return Err(Error::MiddlewareIndex(index));
+    }
+
+    let middleware_boxed = &mut lock[index];
+
+    let middleware = &mut middleware_boxed.as_any().downcast_mut::<M>().ok_or(Error::DowncastError)?;
+
+    Ok(access(middleware))
   }
 }
