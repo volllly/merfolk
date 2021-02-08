@@ -47,6 +47,47 @@ fn derive_in_process() {
 }
 
 #[test]
+fn derive_in_process_definition_only() {
+  #[mer_frontend_derive::frontend()]
+  struct DataC {}
+
+  #[mer_frontend_derive::frontend()]
+
+  struct DataR {}
+
+  #[mer_frontend_derive::frontend(target = "DataC")]
+  trait Caller
+  {
+    #[mer_frontend_derive::frontend(definition_only)]
+    fn def();
+  }
+
+  #[mer_frontend_derive::frontend(target = "DataR")]
+  trait Receiver
+  {
+    fn def() {}
+  }
+
+  let (to, from): (
+    tokio::sync::mpsc::Sender<mer_backend_in_process::InProcessChannel>,
+    tokio::sync::mpsc::Receiver<mer_backend_in_process::InProcessChannel>,
+  ) = tokio::sync::mpsc::channel(1);
+
+  let mer_caller = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().to(to).build().unwrap())
+    .frontend(DataC::builder().build().unwrap())
+    .build()
+    .unwrap();
+
+  let _mer_register = Mer::builder()
+    .backend(mer_backend_in_process::InProcess::builder().from(from).build().unwrap())
+    .frontend(DataR::builder().build().unwrap())
+    .build()
+    .unwrap();
+
+  mer_caller.frontend(|f| { f.def().unwrap() }).unwrap();
+}
+#[test]
 fn derive_http() {
   #[mer_frontend_derive::frontend()]
   struct Data<T>

@@ -1,20 +1,41 @@
-use darling::FromMeta;
+use darling::{util::Flag, FromMeta};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
 #[derive(Debug, FromMeta)]
-pub struct AttrArgs {
+pub struct Args {
   #[darling(default)]
   pub target: Option<syn::Path>,
+  #[darling(default)]
+  pub definition_only: Flag,
 }
 
-pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStream, Vec<syn::Error>> {
+pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, Vec<syn::Error>> {
   let trait_name = &input.ident;
   let trait_generics = &input.generics;
   let service_name = args.target.as_ref().unwrap();
   let where_clause = &trait_generics.where_clause;
 
   let items = &input.items;
+  let filtered_items: Vec<&syn::TraitItem> = input.items.iter().filter(|i| {
+    match &i {
+      syn::TraitItem::Method(m) => {
+        if let Some(attr) = m.attrs.iter().find(|a| a.path.segments.last().map_or(false, |p| p.ident == "frontend")) {
+          match Args::from_meta(&if let Ok(meta) = attr.parse_meta() { meta } else { return true; }) {
+            Ok(a) => {
+              a.definition_only.is_none()
+            },
+            Err(_) => {
+              true
+            }
+          }
+        } else {
+          true
+        }
+      }
+      _ => true,
+    }
+  }).collect();
   let item_methods: Vec<syn::TraitItemMethod> = items
     .iter()
     .filter_map(|i| match i {
@@ -34,8 +55,25 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
   let mut impl_generics = trait_generics.clone();
   impl_generics.params.insert(0, syn::parse_quote! { __B });
   impl_generics.params.insert(0, syn::parse_quote! { '__a });
+  
+  let filtered_item_methods: Vec<&syn::TraitItemMethod> = item_methods
+  .iter()
+  .filter(|i| {
+    if let Some(attr) = i.attrs.iter().find(|a| a.path.segments.last().map_or(false, |p| p.ident == "frontend")) {
+      match Args::from_meta(&if let Ok(meta) = attr.parse_meta() { meta } else { return true; }) {
+        Ok(a) => {
+          a.definition_only.is_none()
+        },
+        Err(_) => {
+          true
+        }
+      }
+    } else {
+      true
+    }
+  }).collect();
 
-  let receiver_impl_items: Vec<TokenStream> = item_methods
+  let receiver_impl_items: Vec<TokenStream> = filtered_item_methods
     .iter()
     .map(|i| {
       let item_name = format_ident!("{}", &i.sig.ident);
@@ -156,11 +194,11 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
 
   Ok(quote! {
     trait #trait_name #impl_generic_def #where_clause {
-      #( #item_methods )*
+      #( #filtered_item_methods )*
     }
 
     impl #impl_generic_def #trait_name #impl_generics for #service_name #impl_generics #where_clause {
-      #( #items )*
+      #( #filtered_items )*
     }
 
     impl #impl_generic_def #service_name #impl_generics #where_clause {

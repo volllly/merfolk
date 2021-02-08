@@ -15,12 +15,14 @@ fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {
 pub fn frontend(args: TokenStream, input: TokenStream) -> TokenStream {
   let args = parse_macro_input!(args as AttributeArgs);
 
-  let args_parsed = match frontend::AttrArgs::from_list(&args) {
+  let args_parsed = match frontend::Args::from_list(&args) {
     Ok(v) => v,
     Err(e) => {
       return TokenStream::from(e.write_errors());
     }
   };
+
+  if args_parsed.definition_only.is_some() { return input; }
 
   if args_parsed.target.is_some() {
     let input = parse_macro_input!(input as ItemTrait);
