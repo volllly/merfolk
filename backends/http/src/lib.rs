@@ -201,9 +201,9 @@ impl Backend for Http {
       match err {
         Ok(err) => match err {
           Error::AlreadyStarted | Error::NoListen | Error::NoReceiver => {}
-          err => return Err(err.into())
+          err => return Err(err.into()),
         },
-        Err(err) => return Err(err)
+        Err(err) => return Err(err),
       }
     };
 

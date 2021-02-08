@@ -4,23 +4,106 @@
 //#[doc = include_str!("../../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//! [`mer`](crate) is a **m**inimal **e**xtensible **r**emote procedure call framework.
+//! [`mer`] is a **m**inimal **e**xtensible **r**emote procedure call framework. [`mer`] can act as a server or a client or both depending on the configuration.
 //!
-//! [`mer`](crate) consists of a [`Backend`], [`Frontend`] and optional [`Middleware`]s.
+//! The architecture is split into three modular parts: the [`Backend`], the [`Frontend`] and optional [`Middleware`]s.
 //!
 //! ## [`Backend`]
 //! The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`] this can happen over different channels (e.g. http, serialport, etc.).
 //! The [`Backend`] serializes and deserializes the RPCs using the [`serde`] framework.
 //!
 //! ## Frontend
-//! The [`Frontend`] is providing an API to make RPCs and to receive them.
+//! The [`Frontend`] is providing an API to make RPCs and to receive them. The way RPCs are made by the client and and handled the server depend on the frontend [`Frontend`]
 //!
 //! ## Middleware
-//! A [`Middleware`] can modify sent and received RPCs and replies.
+//! A [`Middleware`] can modify sent and received RPCs and replies. Or perform custom actions on a sent or received RPC and reply.
+//!
+//! # Use [`mer`]
+//! [`mer`] needs a [`Backend`] and a [`Frontend`] to operate.
+//! The following examples uses the [`Http`](mer_backend_http) [`Backend`] and the [`Register`](mer_frontend_register) [`Frontend`] (see their documentation on how to use them).
+//!
+//! How to use [`mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
+//!
+//! ## Server
+//! ```
+//! # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+//! # use mer::Mer;
+//! # use mer_backend_http::Http;
+//! # use mer_frontend_register::Register;
+//! # fn main() {
+//! // remote procedure definitions
+//! fn add(a: i32, b: i32) -> i32 {
+//!   a + b
+//! }
+//! fn subtract(a: i32, b: i32) -> i32 {
+//!   a - b
+//! }
+//!
+//! // build the backend
+//! let backend = Http::builder()
+//!   // configure backend as server
+//!   .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080))
+//!   .build()
+//!   .unwrap();
+//!
+//! // build the frontend
+//! let frontend = Register::builder()
+//!   .procedures(
+//!     vec![
+//!       ("add", Register::<Http>::make_procedure(|(a, b)| add(a, b))),
+//!       ("subtract", Register::<Http>::make_procedure(|(a, b)| subtract(a, b))),
+//!     ]
+//!     .into_iter()
+//!     .collect(),
+//!   )
+//!   .build()
+//!   .unwrap();
+//!
+//! // register the procedures in the frontend
+//! frontend.register("add", |(a, b)| add(a, b)).unwrap();
+//! frontend.register("subtract", |(a, b)| subtract(a, b)).unwrap();
+//!
+//! // build mer instance acting as server
+//! let _mer = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+//! # }
+//! ```
+//!
+//! ## Client
+//! ```
+//! # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+//! # use anyhow::Result;
+//! # use mer::Mer;
+//! # use mer_backend_http::Http;
+//! # use mer_frontend_register::Register;
+//! # fn main() {
+//! // build the backend
+//! let backend = Http::builder()
+//!   // configure backend as client
+//!   .speak("http://localhost:8080".parse::<hyper::Uri>().unwrap())
+//!   .build()
+//!   .unwrap();
+//!
+//! // build the frontend
+//! let frontend = Register::builder().build().unwrap();
+//!
+//! // build mer instance acting as client
+//! let mer = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+//!
+//! // call remote procedures via the frontend
+//! let result_add: Result<i32> = mer.frontend(|f| f.call("add", &(1, 2))).unwrap();
+//! let result_subtract: Result<i32> = mer.frontend(|f| f.call("subtract", &(1, 2))).unwrap();
+//! # }
+//! ```
+//!
+//!
+//! # Write a [`Backend`]
+//! # Write a [`Frontend`]
+//! # Write a [`Middleware`]
 //!
 //! [`Backend`]: interfaces::Backend
 //! [`Frontend`]: interfaces::Frontend
 //! [`Middleware`]: interfaces::Middleware
+//! [`mer`]: crate
 
 extern crate alloc;
 
@@ -198,7 +281,7 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
   /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
   /// #     .build()
   /// #     .unwrap();
-  ///     let result: i32 = mer.frontend(|f| f.call("add", &(1, 2)).unwrap()).unwrap();
+  /// let result: i32 = mer.frontend(|f| f.call("add", &(1, 2)).unwrap()).unwrap();
   /// # }
   /// ```
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>
@@ -222,7 +305,7 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
   /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
   /// #     .build()
   /// #     .unwrap();
-  ///     mer.backend(|b| b.start().unwrap()).unwrap();
+  /// mer.backend(|b| b.stop().unwrap()).unwrap();
   /// # }
   /// ```
   pub fn backend<T, R>(&self, access: T) -> Result<R, Error>
@@ -236,24 +319,22 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
     }))
   }
 
-  /**
-  Allows accessing the [`Middleware`](interfaces::Middleware)s.
-
-  ```no_run
-  # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-  # use mer_backend_http::Http;
-  # use mer_middleware_authentication::Authentication;
-  # fn main() {
-  #   let mer = mer::Mer::builder()
-  #     .backend(mer_backend_http::Http::builder().build().unwrap())
-  #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
-  #     .middlewares(vec![Authentication::builder().auth(("user".into(), "pwd".into())).build_boxed().unwrap()])
-  #     .build()
-  #     .unwrap();
-  mer.middlewares(0, |_m: &mut Authentication<Http>| {}).unwrap();
-  # }
-  ```
-  */
+  /// Allows accessing the [`Middleware`](interfaces::Middleware)s.
+  ///
+  /// ```no_run
+  /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+  /// # use mer_backend_http::Http;
+  /// # use mer_middleware_authentication::Authentication;
+  /// # fn main() {
+  /// #   let mer = mer::Mer::builder()
+  /// #     .backend(mer_backend_http::Http::builder().build().unwrap())
+  /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  /// #     .middlewares(vec![Authentication::builder().auth(("user".into(), "pwd".into())).build_boxed().unwrap()])
+  /// #     .build()
+  /// #     .unwrap();
+  /// mer.middlewares(0, |_m: &mut Authentication<Http>| {}).unwrap();
+  /// # }
+  /// ```
   pub fn middlewares<M, T, R>(&self, index: usize, access: T) -> Result<R, Error>
   where
     M: interfaces::Middleware<Backend = B> + 'static,
