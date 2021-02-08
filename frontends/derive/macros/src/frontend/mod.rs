@@ -58,13 +58,24 @@ pub fn expand_trait(args: &AttrArgs, input: &syn::ItemTrait) -> Result<TokenStre
         let deser_payload = __B::deserialize::<(#( #arguments ),*)>(&call.payload)?;
       };
 
-      let reply = match has_self {
-        true => quote! {
-          let reply = <Self as #trait_name #impl_generics>::#item_name(self, #( deser_payload.#index),*);
-        },
-        false => quote! {
-          let reply = <Self as #trait_name #impl_generics>::#item_name(#( deser_payload.#index),*);
-        },
+      let reply = if arguments.len() != 1 {
+        match has_self {
+          true => quote! {
+            let reply = <Self as #trait_name #impl_generics>::#item_name(self, #( deser_payload.#index),*);
+          },
+          false => quote! {
+            let reply = <Self as #trait_name #impl_generics>::#item_name(#( deser_payload.#index),*);
+          },
+        }
+      } else {
+        match has_self {
+          true => quote! {
+            let reply = <Self as #trait_name #impl_generics>::#item_name(self, deser_payload);
+          },
+          false => quote! {
+            let reply = <Self as #trait_name #impl_generics>::#item_name(deser_payload);
+          },
+        }
       };
 
       let ser = quote! {
@@ -193,14 +204,14 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
   impl_generics.params.insert(0, syn::parse_quote! { '__a });
 
   Ok(quote! {
-    #[derive(derive_builder::Builder)]
+    #[derive(::mer_frontend_derive::reexports::derive_builder::Builder)]
     #[builder(pattern = "owned")]
     #[cfg_attr(not(feature = "std"), builder(no_std))]
     struct #struct_name #impl_generic_def #where_clause {
-      #fields,
-
       #[builder(private, default = "None")]
-      __call: Option<Box<dyn Fn(::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> + '__a + Send>>
+      __call: Option<Box<dyn Fn(::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> + '__a + Send>>,
+
+      #fields
     }
 
 
@@ -222,7 +233,7 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
       }
 
       fn receive(&self, call: ::mer_frontend_derive::reexports::mer::Call<__B::Intermediate>) -> ::mer_frontend_derive::reexports::anyhow::Result<::mer_frontend_derive::reexports::mer::Reply<__B::Intermediate>> {
-        log::debug!("receiving: Call {{ prodecure: {:?}, payload: ... }}", &call.procedure);
+        log::debug!("receiving: Call {{ procedure: {:?}, payload: ... }}", &call.procedure);
 
         self.__receive(call).map_err(::core::convert::Into::into)
       }
