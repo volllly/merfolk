@@ -63,12 +63,10 @@ fn test_with_data() {
   }
 }
 
-
 #[test]
 fn test_with_definitions() {
   #[frontend]
-  struct Data {
-  }
+  struct Data {}
 
   #[frontend(target = "Data")]
   trait Service {

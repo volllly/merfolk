@@ -22,7 +22,9 @@ pub fn frontend(args: TokenStream, input: TokenStream) -> TokenStream {
     }
   };
 
-  if args_parsed.definition_only.is_some() { return input; }
+  if args_parsed.definition_only.is_some() {
+    return input;
+  }
 
   if args_parsed.target.is_some() {
     let input = parse_macro_input!(input as ItemTrait);

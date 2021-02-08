@@ -17,25 +17,27 @@ pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, 
   let where_clause = &trait_generics.where_clause;
 
   let items = &input.items;
-  let filtered_items: Vec<&syn::TraitItem> = input.items.iter().filter(|i| {
-    match &i {
+  let filtered_items: Vec<&syn::TraitItem> = input
+    .items
+    .iter()
+    .filter(|i| match &i {
       syn::TraitItem::Method(m) => {
         if let Some(attr) = m.attrs.iter().find(|a| a.path.segments.last().map_or(false, |p| p.ident == "frontend")) {
-          match Args::from_meta(&if let Ok(meta) = attr.parse_meta() { meta } else { return true; }) {
-            Ok(a) => {
-              a.definition_only.is_none()
-            },
-            Err(_) => {
-              true
-            }
+          match Args::from_meta(&if let Ok(meta) = attr.parse_meta() {
+            meta
+          } else {
+            return true;
+          }) {
+            Ok(a) => a.definition_only.is_none(),
+            Err(_) => true,
           }
         } else {
           true
         }
       }
       _ => true,
-    }
-  }).collect();
+    })
+    .collect();
   let item_methods: Vec<syn::TraitItemMethod> = items
     .iter()
     .filter_map(|i| match i {
@@ -55,23 +57,24 @@ pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, 
   let mut impl_generics = trait_generics.clone();
   impl_generics.params.insert(0, syn::parse_quote! { __B });
   impl_generics.params.insert(0, syn::parse_quote! { '__a });
-  
+
   let filtered_item_methods: Vec<&syn::TraitItemMethod> = item_methods
-  .iter()
-  .filter(|i| {
-    if let Some(attr) = i.attrs.iter().find(|a| a.path.segments.last().map_or(false, |p| p.ident == "frontend")) {
-      match Args::from_meta(&if let Ok(meta) = attr.parse_meta() { meta } else { return true; }) {
-        Ok(a) => {
-          a.definition_only.is_none()
-        },
-        Err(_) => {
-          true
+    .iter()
+    .filter(|i| {
+      if let Some(attr) = i.attrs.iter().find(|a| a.path.segments.last().map_or(false, |p| p.ident == "frontend")) {
+        match Args::from_meta(&if let Ok(meta) = attr.parse_meta() {
+          meta
+        } else {
+          return true;
+        }) {
+          Ok(a) => a.definition_only.is_none(),
+          Err(_) => true,
         }
+      } else {
+        true
       }
-    } else {
-      true
-    }
-  }).collect();
+    })
+    .collect();
 
   let receiver_impl_items: Vec<TokenStream> = filtered_item_methods
     .iter()

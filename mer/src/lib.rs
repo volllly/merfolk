@@ -124,13 +124,13 @@
 //!   .unwrap();
 //!
 //! // build the client frontend
-//! let caller = Register::builder().build().unwrap();
+//! let caller_frontend = Register::builder().build().unwrap();
 //!
 //! // build the server frontend
-//! let receiver = Receiver::builder().build().unwrap();
+//! let receiver_frontend = Receiver::builder().build().unwrap();
 //!
 //! // combine the frontends using the [`Duplex`](/mer_frontend_derive) frontend
-//! let frontend = Duplex::builder().caller(caller).receiver(receiver).build().unwrap();
+//! let frontend = Duplex::builder().caller(caller_frontend).receiver(receiver_frontend).build().unwrap();
 //!
 //! // build router middleware
 //! let middleware = Router::builder().routes(vec![("prefix_(.*)".to_string(), "$1".to_string())]).build_boxed().unwrap();

@@ -56,15 +56,13 @@ fn derive_in_process_definition_only() {
   struct DataR {}
 
   #[mer_frontend_derive::frontend(target = "DataC")]
-  trait Caller
-  {
+  trait Caller {
     #[mer_frontend_derive::frontend(definition_only)]
     fn def();
   }
 
   #[mer_frontend_derive::frontend(target = "DataR")]
-  trait Receiver
-  {
+  trait Receiver {
     fn def() {}
   }
 
@@ -85,7 +83,7 @@ fn derive_in_process_definition_only() {
     .build()
     .unwrap();
 
-  mer_caller.frontend(|f| { f.def().unwrap() }).unwrap();
+  mer_caller.frontend(|f| f.def().unwrap()).unwrap();
 }
 #[test]
 fn derive_http() {
