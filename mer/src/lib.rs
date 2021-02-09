@@ -20,7 +20,7 @@
 //!
 //! # Use [`mer`]
 //! [`mer`] needs a [`Backend`] and a [`Frontend`] to operate.
-//! The following examples uses the [`Http`](/mer_backend_http) [`Backend`] and the [`Register`](/mer_frontend_register) [`Frontend`] (see their documentation on how to use them).
+//! The following examples uses the [`Http`](/mer_backend_http) [`Backend`] and the [`Register`](/mer_frontend_register) and [`Derive`](/mer_frontend_derive) [`Frontend`] (see their documentation on how to use them).
 //!
 //! How to use [`mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
 //!
@@ -150,9 +150,9 @@
 //! | [`Backend`]    | [`InProcess`](/mer_backend_in_process)             | Communicates via [`tokio`](tokio) [`channels`](tokio::sync::mpsc::channel) in `json` format (mostly used for testing purposes). |
 //! | [`Backend`]    | [`SerialPort`](/mer_backend_serialport)            | Communicates via Serialport (using the [`serialport`](serialport) library) in [`ron`](ron) format.                                          |
 //! | [`Frontend`]   | [`Derive`](/mer_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
-//! | [`Frontend`]   | [`Duplex`](/mer_frontend_derive)                   | Allows for different frontens for calling and receiving RPCs.                                                            |
-//! | [`Frontend`]   | [`Logger`](/mer_frontend_derive)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
-//! | [`Frontend`]   | [`Register`](/mer_frontend_derive)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
+//! | [`Frontend`]   | [`Duplex`](/mer_frontend_duplex)                   | Allows for different frontends for calling and receiving RPCs.                                                            |
+//! | [`Frontend`]   | [`Logger`](/mer_frontend_logger)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
+//! | [`Frontend`]   | [`Register`](/mer_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
 //! | [`Middleware`] | [`Authentication`](/mer_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
 //! | [`Middleware`] | [`Router`](/mer_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
 //!
