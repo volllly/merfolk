@@ -48,20 +48,7 @@ jobs:
 
   check:
     name: Check
-    runs-on: ubuntu-latest
-    env:
-      PKG_CONFIG_DIR: ''
-      PKG_CONFIG_LIBDIR: /usr/lib/pkgconfig:/usr/share/pkgconfig
-      PKG_CONFIG_SYSROOT_DIR: /
-      PKG_CONFIG_ALLOW_CROSS: 1
-    strategy:
-      matrix:
-        target:
-          - x86_64-apple-darwin
-          - x86_64-pc-windows-gnu
-          - x86_64-pc-windows-msvc
-          - x86_64-unknown-linux-gnu
-          - armv7-unknown-linux-gnueabihf
+    runs-on: macos-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -70,12 +57,9 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          target: ${{ matrix.target }}
+          target: x86_64-apple-darwin
           toolchain: stable
           override: true
-
-      - name: install libudev
-        run: sudo apt-get install -y libudev-dev && sudo apt install -y pkg-config
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
@@ -83,38 +67,6 @@ jobs:
           command: check
           use-cross: true
           args: --release --target=${{ matrix.target }}
-
-  test-cross:
-    name: Test Suite Cross
-    runs-on: ubuntu-latest
-    env:
-      PKG_CONFIG_ALLOW_CROSS: 1
-    strategy:
-      matrix:
-        target:
-          - armv7-unknown-linux-gnueabihf
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-
-      - name: install libudev
-        run: sudo apt-get install -y libudev-dev && sudo apt install -y pkg-config
-
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          use-cross: true
-          args: --target=${{ matrix.target }}
-
 
   test-linux:
     name: Test Suite Linux
