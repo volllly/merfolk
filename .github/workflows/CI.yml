@@ -65,8 +65,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          use-cross: true
-          args: --release --target=${{ matrix.target }}
+          args: --release
 
   test-linux:
     name: Test Suite Linux
