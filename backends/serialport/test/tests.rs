@@ -1,7 +1,7 @@
-#[cfg(unix)]
+#[cfg(all(unix, not(target_arch = "armv7")))]
 use mer::*;
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_arch = "armv7")))]
 fn add(a: i32, b: i32) -> i32 {
   a + b
 }
@@ -148,7 +148,7 @@ impl std::io::Read for MockTTY {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_arch = "armv7")))]
 fn register_serialport() {
   let register_caller = mer_frontend_register::Register::builder().build().unwrap();
   let register_receiver = mer_frontend_register::Register::builder().build().unwrap();
