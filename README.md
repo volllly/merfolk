@@ -1,11 +1,11 @@
 # mer
-[![CI](https://github.com/volllly/mer/workflows/CI/badge.svg?branch=main)](https://github.com/volllly/mer/actions?query=workflow%3ACI)
 
+[![CI](https://github.com/volllly/mer/workflows/CI/badge.svg?branch=main)](https://github.com/volllly/mer/actions?query=workflow%3ACI)
 
 `mer` is a **m**inimal **e**xtensible **r**emote procedure call framework. `mer` can act as a server or a client or both depending on the configuration.
 The architecture is split into three modular parts: the `Backend`, the `Frontend` and optional `Middleware`s.
 
-## [`Backend`]
+## `Backend`
 
 The Backend is responsible for sending and receiving RPCs. Depending on the `Backend` this can happen over different channels (e.g. http, serialport, etc.).
 The `Backend` serializes and deserializes the RPCs using the `serde` framework.
@@ -31,15 +31,18 @@ How to use `mer` (how to setup the server and client) depends strongly on the us
 fn add(a: i32, b: i32) -> i32 {
   a + b
 }
+
 fn subtract(a: i32, b: i32) -> i32 {
   a - b
 }
+
 // build the backend
 let backend = Http::builder()
   // configure backend as server
   .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080))
   .build()
   .unwrap();
+
 // build the frontend
 let frontend = Register::builder()
   .procedures(
@@ -52,9 +55,11 @@ let frontend = Register::builder()
   )
   .build()
   .unwrap();
+
 // register the procedures in the frontend
 frontend.register("add", |(a, b)| add(a, b)).unwrap();
 frontend.register("subtract", |(a, b)| subtract(a, b)).unwrap();
+
 // build mer instance acting as server
 let _mer = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
 ```
@@ -68,10 +73,13 @@ let backend = Http::builder()
   .speak("http://localhost:8080".parse::<hyper::Uri>().unwrap())
   .build()
   .unwrap();
+
 // build the frontend
 let frontend = Register::builder().build().unwrap();
+
 // build mer instance acting as client
 let mer = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+
 // call remote procedures via the frontend
 let result_add: Result<i32> = mer.frontend(|f| f.call("add", &(1, 2))).unwrap();
 let result_subtract: Result<i32> = mer.frontend(|f| f.call("subtract", &(1, 2))).unwrap();
@@ -83,10 +91,12 @@ let result_subtract: Result<i32> = mer.frontend(|f| f.call("subtract", &(1, 2)))
 // remote procedure definitions for server
 #[frontend()]
 struct Receiver {}
+
 #[frontend(target = "Receiver")]
 trait Definition {
   fn some_function(arg: String) {}
 }
+
 // build the backend
 let backend = Http::builder()
   // configure backend as client
@@ -95,16 +105,22 @@ let backend = Http::builder()
   .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081))
   .build()
   .unwrap();
+
 // build the client frontend
 let caller_frontend = Register::builder().build().unwrap();
+
 // build the server frontend
 let receiver_frontend = Receiver::builder().build().unwrap();
+
 // combine the frontends using the [`Duplex`](/mer_frontend_derive) frontend
 let frontend = Duplex::builder().caller(caller_frontend).receiver(receiver_frontend).build().unwrap();
+
 // build router middleware
 let middleware = Router::builder().routes(vec![("prefix_(.*)".to_string(), "$1".to_string())]).build_boxed().unwrap();
+
 // build mer instance acting as client and server
 let mer = Mer::builder().backend(backend).frontend(frontend).middlewares(vec![middleware]).build().unwrap();
+
 // call remote procedures via the caller frontend
 let result: String = mer.frontend(|f| f.caller.call("some_remote_function", &()).unwrap()).unwrap();
 ```
@@ -123,7 +139,7 @@ let result: String = mer.frontend(|f| f.caller.call("some_remote_function", &())
 | `Middleware` | [`Authentication`](middlewares/authentication) | Adds simple authentication and scopes.                                                                      |
 | `Middleware` | [`Router`](middlewares/router)                 | Adds simple routing of procedures based on the procedure name.                                              |
 
-# Develop a Module for [`mer`]
+# Develop a Module for `mer`
 
 If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the `Backend`, `Frontend` or `Middleware` trait.
 For examples please see the [provided modules](#provided-modules)
