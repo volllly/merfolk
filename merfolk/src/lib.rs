@@ -151,11 +151,11 @@
 //! | Type           | Name                                              | Description |
 //! |----------------|---------------------------------------------------|---|
 //! | [`Backend`]    | [`Http`](/merfolk_backend_http)                        | Communicates via Http and in `json` format.                                                                              |
-//! | [`Backend`]    | [`InProcess`](/merfolk_backend_in_process)             | Communicates via [`tokio`](tokio) [`channels`](tokio::sync::mpsc::channel) in `json` format (mostly used for testing purposes). |
-//! | [`Backend`]    | [`SerialPort`](/merfolk_backend_serialport)            | Communicates via serial port (using the [`serialport`](serialport) library) in [`ron`](ron) format.                                          |
+//! | [`Backend`]    | [`InProcess`](/merfolk_backend_in_process)             | Communicates via [`tokio`](/tokio) [`channels`](https://docs.rs/tokio/1.2.0/tokio/sync/mpsc/fn.channel.html) in `json` format (mostly used for testing purposes). |
+//! | [`Backend`]    | [`SerialPort`](/merfolk_backend_serialport)            | Communicates via serial port (using the [`serialport`](/serialport) library) in [`ron`](/ron) format.                                          |
 //! | [`Frontend`]   | [`Derive`](/merfolk_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
 //! | [`Frontend`]   | [`Duplex`](/merfolk_frontend_duplex)                   | Allows for different frontends for calling and receiving RPCs.                                                            |
-//! | [`Frontend`]   | [`Logger`](/merfolk_frontend_logger)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
+//! | [`Frontend`]   | [`Logger`](/merfolk_frontend_logger)                   | Provides a frontend using the [`log`](/log) facade on the client side.                                                         |
 //! | [`Frontend`]   | [`Register`](/merfolk_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
 //! | [`Middleware`] | [`Authentication`](/merfolk_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
 //! | [`Middleware`] | [`Router`](/merfolk_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
