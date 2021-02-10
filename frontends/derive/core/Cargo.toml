@@ -3,6 +3,12 @@ name = "merfolk_frontend_derive"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A `Frontend` for merfolk using derive macros."
+repository = "https://github.com/volllly/merfolk"
+# readme = "../README.md"
+documentation = "https://docs.rs/merfolk_frontend_derive/"
+keywords = ["RPC", "merfolk", "derive"]
 
 [features]
 
@@ -10,15 +16,16 @@ default = ["std"]
 
 std = [
   "thiserror",
-  "log/std"
+  "log/std",
+  "merfolk/std"
 ]
 
 [dependencies]
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", default-features = false }
-merfolk = { path = "../../../merfolk" }
-merfolk_frontend_derive_macros = { path = "../macros" }
+merfolk = "0"
+merfolk_frontend_derive_macros = "0"
 thiserror = { version = "1.0", optional = true }
 
 [dev-dependencies]

@@ -3,6 +3,12 @@ name = "merfolk_middleware_router"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A `Middleware` for merfolk providing simple routing."
+repository = "https://github.com/volllly/merfolk"
+# readme = "../README.md"
+documentation = "https://docs.rs/merfolk_middleware_router/"
+keywords = ["RPC", "merfolk", "authentication"]
 
 [features]
 
@@ -10,7 +16,7 @@ edition = "2018"
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = "0.4"
-merfolk = { path = "../../merfolk" }
+merfolk = { version = "0", features = ["std"]}
 regex = "1"
 thiserror = "1.0"
 

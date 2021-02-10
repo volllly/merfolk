@@ -3,6 +3,12 @@ name = "merfolk_frontend_logger"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A `Frontend` for merfolk using the log crate."
+repository = "https://github.com/volllly/merfolk"
+# readme = "../README.md"
+documentation = "https://docs.rs/merfolk_frontend_logger/"
+keywords = ["RPC", "merfolk", "log"]
 
 [features]
 
@@ -10,7 +16,7 @@ edition = "2018"
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", features = ["std"] }
-merfolk = { path = "../../merfolk" }
+merfolk = { version = "0", features = ["std"] }
 serde = "1.0.116"
 thiserror = "1.0"
 wildmatch = "1.0"

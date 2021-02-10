@@ -3,6 +3,12 @@ name = "merfolk_backend_serialport"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A serial port `Backend` for merfolk."
+repository = "https://github.com/volllly/merfolk"
+# readme = "../README.md"
+documentation = "https://docs.rs/merfolk_backend_serialport/"
+keywords = ["RPC", "merfolk", "Channel"]
 
 [features]
 
@@ -12,7 +18,7 @@ default = []
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = "0.4"
-merfolk = { path = "../../merfolk" }
+merfolk = { version = "0", features = ["std"] }
 serde = { version = "1.0.116", features = ["derive"] }
 ron = "0.6"
 serialport = "4.0"
