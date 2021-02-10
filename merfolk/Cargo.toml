@@ -6,7 +6,7 @@ edition = "2018"
 license = "MIT"
 description = "A minimal extensible RPC framework."
 repository = "https://github.com/volllly/merfolk"
-
+readme = "../README.md"
 [features]
 
 default = ["std"]
