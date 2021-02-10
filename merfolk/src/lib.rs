@@ -166,7 +166,7 @@
 //! If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`], [`Frontend`] or [`Middleware`] trait.
 //!
 //! For examples please see the [provided modules](#provided-modules)
-//! <--
+//! <!--
 //! [`Backend`]: interfaces::Backend
 //! [`Frontend`]: interfaces::Frontend
 //! [`Middleware`]: interfaces::Middleware
