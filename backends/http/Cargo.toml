@@ -3,6 +3,12 @@ name = "merfolk_backend_http"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A HTTP `Backend` for merfolk."
+repository = "https://github.com/volllly/merfolk"
+# readme = "../README.md"
+documentation = "https://docs.rs/merfolk_backend_http/"
+keywords = ["RPC", "merfolk", "Http"]
 
 [features]
 
@@ -16,7 +22,7 @@ http2 = ["hyper/http2"]
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = "0.4"
-merfolk = { path = "../../merfolk" }
+merfolk = { version = "0", features = ["std"]}
 thiserror = "1.0"
 serde = "1.0.116"
 serde_json = "1.0.57"
