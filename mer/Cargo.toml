@@ -3,6 +3,9 @@ name = "mer"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A minimal extensible RPC framework."
+repository = "https://github.com/volllly/mer"
 
 [features]
 

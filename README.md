@@ -7,7 +7,7 @@ The architecture is split into three modular parts: the `Backend`, the `Frontend
 
 ## `Backend`
 
-The Backend is responsible for sending and receiving RPCs. Depending on the `Backend` this can happen over different channels (e.g. http, serialport, etc.).
+The Backend is responsible for sending and receiving RPCs. Depending on the `Backend` this can happen over different channels (e.g. http, serial port, etc.).
 The `Backend` serializes and deserializes the RPCs using the `serde` framework.
 
 ## Frontend

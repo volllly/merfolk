@@ -218,16 +218,12 @@ pub struct Call<T> {
   pub procedure: String,
   pub payload: T,
 }
-unsafe impl<T> Send for Call<T> where T: Send {}
-unsafe impl<T> Sync for Call<T> where T: Sync {}
 
 #[derive(Debug)]
 /// Data structure for outgoing and incoming RPC Replies.
 pub struct Reply<T> {
   pub payload: T,
 }
-unsafe impl<T> Send for Reply<T> where T: Send {}
-unsafe impl<T> Sync for Reply<T> where T: Sync {}
 
 #[derive(derive_builder::Builder)]
 #[cfg_attr(not(feature = "std"), builder(no_std))]
