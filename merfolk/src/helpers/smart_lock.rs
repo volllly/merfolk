@@ -6,7 +6,7 @@
 //! # Example
 //! ```
 //! # extern crate alloc;
-//! # use mer::{smart_lock, access, clone_lock, helpers::smart_lock::SmartLock};
+//! # use merfolk::{smart_lock, access, clone_lock, helpers::smart_lock::SmartLock};
 //!
 //! let lock: SmartLock<String> = smart_lock!("Hello".to_string());
 //!

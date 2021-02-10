@@ -1,4 +1,4 @@
-//! Helper types and functions for mer.
+//! Helper types and functions for merfolk.
 
 pub mod smart_lock;
 

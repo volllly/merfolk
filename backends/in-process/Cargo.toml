@@ -1,5 +1,5 @@
 [package]
-name = "mer_backend_in_process"
+name = "merfolk_backend_in_process"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
@@ -10,14 +10,14 @@ edition = "2018"
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = "0.4"
-mer = { path = "../../mer" }
+merfolk = { path = "../../merfolk" }
 serde = "1.0.116"
 serde_json = "1.0.57"
 thiserror = "1.0"
 tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync"] }
 
 [dev-dependencies]
-mer_frontend_register = { path = "../../frontends/register" }
+merfolk_frontend_register = { path = "../../frontends/register" }
 
 rand = "0.8"
 

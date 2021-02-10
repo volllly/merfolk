@@ -17,9 +17,9 @@ use anyhow::Result;
 ///
 /// # Examples
 /// For examples look at the provided [`Backend`]s:
-/// * [`Http`](/mer_backend_http)
-/// * [`InProcess`](/mer_backend_in_process)
-/// * [`SerialPort`](/mer_backend_serialport)
+/// * [`Http`](/merfolk_backend_http)
+/// * [`InProcess`](/merfolk_backend_in_process)
+/// * [`SerialPort`](/merfolk_backend_serialport)
 
 pub trait Backend: Send {
   /// The Intermediate type required by the [`Backend`].

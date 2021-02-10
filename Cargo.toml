@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "mer",
+  "merfolk",
 
   "frontends/derive/core",
   "frontends/derive/macros",

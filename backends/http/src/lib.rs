@@ -1,4 +1,4 @@
-use mer::{interfaces::Backend, Call, Reply};
+use merfolk::{interfaces::Backend, Call, Reply};
 
 use anyhow::Result;
 use thiserror::Error;

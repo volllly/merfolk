@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use mer::{
+use merfolk::{
   interfaces::{Backend, Middleware},
   Call, Reply,
 };

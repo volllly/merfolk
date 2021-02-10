@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use mer::{
+use merfolk::{
   interfaces::{Backend, Middleware},
   Call, Reply,
 };

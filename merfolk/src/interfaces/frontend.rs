@@ -21,9 +21,9 @@ use anyhow::Result;
 ///
 /// # Examples
 /// For examples look at the provided [`Frontend`]s:
-/// * [`Derive`](/mer_frontend_derive)
-/// * [`Logger`](/mer_frontend_logger)
-/// * [`Register`](/mer_frontend_register)
+/// * [`Derive`](/merfolk_frontend_derive)
+/// * [`Logger`](/merfolk_frontend_logger)
+/// * [`Register`](/merfolk_frontend_register)
 
 pub trait Frontend: Send {
   /// The used  [`Backend`].

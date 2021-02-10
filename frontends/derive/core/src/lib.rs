@@ -1,12 +1,12 @@
 #[cfg(feature = "std")]
 use thiserror::Error;
 
-pub use mer_frontend_derive_macros::frontend;
+pub use merfolk_frontend_derive_macros::frontend;
 
 pub mod reexports {
   pub use anyhow;
   pub use derive_builder;
-  pub use mer;
+  pub use merfolk;
 }
 
 #[cfg(feature = "std")]

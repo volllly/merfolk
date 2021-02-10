@@ -1,4 +1,4 @@
-use mer::{
+use merfolk::{
   interfaces::{Backend, Frontend},
   Call, Reply,
 };
@@ -21,7 +21,7 @@ pub enum Error {
   ProcedureNotRegistered(String),
   #[error("procedures lock was poinsoned")]
   Lock,
-  #[error("call not registered mer init()")]
+  #[error("call not registered merfolk init()")]
   CallNotRegistered,
 }
 

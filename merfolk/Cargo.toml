@@ -1,11 +1,11 @@
 [package]
-name = "mer"
+name = "merfolk"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
 license = "MIT"
 description = "A minimal extensible RPC framework."
-repository = "https://github.com/volllly/mer"
+repository = "https://github.com/volllly/merfolk"
 
 [features]
 
@@ -26,16 +26,16 @@ serde_json = "1.0.57"
 rand = "0.8"
 
 # [doc-dependencies]
-mer_backend_http = { path = "../backends/http" }
-mer_backend_in_process = { path = "../backends/in-process" }
-mer_backend_serialport = { path = "../backends/serialport" }
+merfolk_backend_http = { path = "../backends/http" }
+merfolk_backend_in_process = { path = "../backends/in-process" }
+merfolk_backend_serialport = { path = "../backends/serialport" }
 
-mer_frontend_derive = { path = "../frontends/derive/core" }
-mer_frontend_register = { path = "../frontends/register" }
-mer_frontend_duplex = { path = "../frontends/duplex" }
-mer_frontend_logger = { path = "../frontends/logger" }
+merfolk_frontend_derive = { path = "../frontends/derive/core" }
+merfolk_frontend_register = { path = "../frontends/register" }
+merfolk_frontend_duplex = { path = "../frontends/duplex" }
+merfolk_frontend_logger = { path = "../frontends/logger" }
 
-mer_middleware_authentication = { path = "../middlewares/authentication" }
-mer_middleware_router = { path = "../middlewares/router" }
+merfolk_middleware_authentication = { path = "../middlewares/authentication" }
+merfolk_middleware_router = { path = "../middlewares/router" }
 
 hyper = { version = "0.14", features = ["client", "server", "tcp"] }

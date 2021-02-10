@@ -1,4 +1,4 @@
-use mer_frontend_derive::*;
+use merfolk_frontend_derive::*;
 
 #[test]
 fn test_generic() {

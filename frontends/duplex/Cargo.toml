@@ -1,5 +1,5 @@
 [package]
-name = "mer_frontend_duplex"
+name = "merfolk_frontend_duplex"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
@@ -16,12 +16,12 @@ std = [
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", default-features = false }
-mer = { path = "../../mer" }
+merfolk = { path = "../../merfolk" }
 serde = "1.0.116"
 
 [dev-dependencies]
-mer_backend_in_process = { path = "../../backends/in-process" }
-mer_frontend_register = { path = "../../frontends/register" }
+merfolk_backend_in_process = { path = "../../backends/in-process" }
+merfolk_frontend_register = { path = "../../frontends/register" }
 
 hyper = "0.14"
 rand = "0.8"

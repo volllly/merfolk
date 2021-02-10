@@ -1,5 +1,5 @@
 [package]
-name = "mer_middleware_router"
+name = "merfolk_middleware_router"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
@@ -10,14 +10,14 @@ edition = "2018"
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = "0.4"
-mer = { path = "../../mer" }
+merfolk = { path = "../../merfolk" }
 regex = "1"
 thiserror = "1.0"
 
 [dev-dependencies]
-mer_frontend_register = { path = "../../frontends/register" }
-mer_backend_in_process = { path = "../../backends/in-process" }
-mer_middleware_authentication = { path = "../../middlewares/authentication" }
+merfolk_frontend_register = { path = "../../frontends/register" }
+merfolk_backend_in_process = { path = "../../backends/in-process" }
+merfolk_middleware_authentication = { path = "../../middlewares/authentication" }
 
 rand = "0.8"
 tokio = "1.0"

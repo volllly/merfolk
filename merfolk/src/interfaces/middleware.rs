@@ -14,8 +14,8 @@ use anyhow::Result;
 ///
 /// # Examples
 /// For examples look at the provided [`Middleware`]s:
-/// * [`Authentication`](/mer_middleware_authentication)
-/// * [`Router`](/mer_middleware_router)
+/// * [`Authentication`](/merfolk_middleware_authentication)
+/// * [`Router`](/merfolk_middleware_router)
 
 pub trait Middleware: Send {
   type Backend: Backend;

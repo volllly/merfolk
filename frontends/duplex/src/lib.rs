@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use mer::{
+use merfolk::{
   interfaces::{Backend, Frontend},
   Call, Reply,
 };

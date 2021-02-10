@@ -1,15 +1,19 @@
-#![doc(issue_tracker_base_url = "https://github.com/volllly/mer/issues/")]
-#![doc(html_root_url = "https://github.com/volllly/mer")]
+#![doc(issue_tracker_base_url = "https://github.com/volllly/merfolk/issues/")]
+#![doc(html_root_url = "https://github.com/volllly/merfolk")]
 //#[doc(include = "../README.md")]
 //#[doc = include_str!("../../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//! [`mer`] is a **m**inimal **e**xtensible **r**emote procedure call framework. [`mer`] can act as a server or a client or both depending on the configuration.
+//! [`merfolk`] is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**. 
 //!
 //! The architecture is split into three modular parts: the [`Backend`], the [`Frontend`] and optional [`Middleware`]s.
 //!
+//! [`merfolk] is a collection of parts. The main part is [`Mer`](crate::Mer) the orchestrator type and a [collection](#provided-modules) of [`Backend`]s, the [`Frontend`]s and [`Middleware`]s (the `Folk`).
+//!
+//! [`Mer`] can act as a server or a client or both depending on the configuration.
+//!
 //! ## [`Backend`]
-//! The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`] this can happen over different channels (e.g. http, serialport, etc.).
+//! The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`] this can happen over different channels (e.g. http, serial port, etc.).
 //! The [`Backend`] serializes and deserializes the RPCs using the [`serde`] framework.
 //!
 //! ## Frontend
@@ -18,18 +22,18 @@
 //! ## Middleware
 //! A [`Middleware`] can modify sent and received RPCs and replies. Or perform custom actions on a sent or received RPC and reply.
 //!
-//! # Use [`mer`]
-//! [`mer`] needs a [`Backend`] and a [`Frontend`] to operate.
-//! The following examples uses the [`Http`](/mer_backend_http) [`Backend`] and the [`Register`](/mer_frontend_register) and [`Derive`](/mer_frontend_derive) [`Frontend`] (see their documentation on how to use them).
+//! # Use [`Mer`]
+//! [`Mer`] needs a [`Backend`] and a [`Frontend`] to operate.
+//! The following examples uses the [`Http`](/merfolk_backend_http) [`Backend`] and the [`Register`](/merfolk_frontend_register) and [`Derive`](/merfolk_frontend_derive) [`Frontend`] (see their documentation on how to use them).
 //!
-//! How to use [`mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
+//! How to use [`Mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
 //!
 //! ## Server
 //! ```
 //! # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-//! # use mer::Mer;
-//! # use mer_backend_http::Http;
-//! # use mer_frontend_register::Register;
+//! # use merfolk::Mer;
+//! # use merfolk_backend_http::Http;
+//! # use merfolk_frontend_register::Register;
 //! # fn main() {
 //! // remote procedure definitions
 //! fn add(a: i32, b: i32) -> i32 {
@@ -63,8 +67,8 @@
 //! frontend.register("add", |(a, b)| add(a, b)).unwrap();
 //! frontend.register("subtract", |(a, b)| subtract(a, b)).unwrap();
 //!
-//! // build mer instance acting as server
-//! let _mer = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+//! // build merfolk instance acting as server
+//! let _merfolk = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
 //! # }
 //! ```
 //!
@@ -72,9 +76,9 @@
 //! ```
 //! # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 //! # use anyhow::Result;
-//! # use mer::Mer;
-//! # use mer_backend_http::Http;
-//! # use mer_frontend_register::Register;
+//! # use merfolk::Mer;
+//! # use merfolk_backend_http::Http;
+//! # use merfolk_frontend_register::Register;
 //! # fn main() {
 //! // build the backend
 //! let backend = Http::builder()
@@ -86,24 +90,24 @@
 //! // build the frontend
 //! let frontend = Register::builder().build().unwrap();
 //!
-//! // build mer instance acting as client
-//! let mer = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+//! // build merfolk instance acting as client
+//! let merfolk = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
 //!
 //! // call remote procedures via the frontend
-//! let result_add: Result<i32> = mer.frontend(|f| f.call("add", &(1, 2))).unwrap();
-//! let result_subtract: Result<i32> = mer.frontend(|f| f.call("subtract", &(1, 2))).unwrap();
+//! let result_add: Result<i32> = merfolk.frontend(|f| f.call("add", &(1, 2))).unwrap();
+//! let result_subtract: Result<i32> = merfolk.frontend(|f| f.call("subtract", &(1, 2))).unwrap();
 //! # }
 //! ```
 //!
 //! # Advanced
 //! ```no_run
 //! # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-//! # use mer::Mer;
-//! # use mer_backend_http::Http;
-//! # use mer_frontend_register::Register;
-//! # use mer_frontend_derive::frontend;
-//! # use mer_frontend_duplex::Duplex;
-//! # use mer_middleware_router::Router;
+//! # use merfolk::Mer;
+//! # use merfolk_backend_http::Http;
+//! # use merfolk_frontend_register::Register;
+//! # use merfolk_frontend_derive::frontend;
+//! # use merfolk_frontend_duplex::Duplex;
+//! # use merfolk_middleware_router::Router;
 //! # fn main() {
 //! // remote procedure definitions for server
 //! #[frontend()]
@@ -129,44 +133,45 @@
 //! // build the server frontend
 //! let receiver_frontend = Receiver::builder().build().unwrap();
 //!
-//! // combine the frontends using the [`Duplex`](/mer_frontend_derive) frontend
+//! // combine the frontends using the [`Duplex`](/merfolk_frontend_derive) frontend
 //! let frontend = Duplex::builder().caller(caller_frontend).receiver(receiver_frontend).build().unwrap();
 //!
 //! // build router middleware
 //! let middleware = Router::builder().routes(vec![("prefix_(.*)".to_string(), "$1".to_string())]).build_boxed().unwrap();
 //!
-//! // build mer instance acting as client and server
-//! let mer = Mer::builder().backend(backend).frontend(frontend).middlewares(vec![middleware]).build().unwrap();
+//! // build merfolk instance acting as client and server
+//! let merfolk = Mer::builder().backend(backend).frontend(frontend).middlewares(vec![middleware]).build().unwrap();
 //!
 //! // call remote procedures via the caller frontend
-//! let result: String = mer.frontend(|f| f.caller.call("some_remote_function", &()).unwrap()).unwrap();
+//! let result: String = merfolk.frontend(|f| f.caller.call("some_remote_function", &()).unwrap()).unwrap();
 //! # }
 //! ```
 //!
 //! # Provided Modules
 //! | Type           | Name                                              | Description |
 //! |----------------|---------------------------------------------------|---|
-//! | [`Backend`]    | [`Http`](/mer_backend_http)                        | Communicates via Http and in `json` format.                                                                              |
-//! | [`Backend`]    | [`InProcess`](/mer_backend_in_process)             | Communicates via [`tokio`](tokio) [`channels`](tokio::sync::mpsc::channel) in `json` format (mostly used for testing purposes). |
-//! | [`Backend`]    | [`SerialPort`](/mer_backend_serialport)            | Communicates via Serialport (using the [`serialport`](serialport) library) in [`ron`](ron) format.                                          |
-//! | [`Frontend`]   | [`Derive`](/mer_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
-//! | [`Frontend`]   | [`Duplex`](/mer_frontend_duplex)                   | Allows for different frontends for calling and receiving RPCs.                                                            |
-//! | [`Frontend`]   | [`Logger`](/mer_frontend_logger)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
-//! | [`Frontend`]   | [`Register`](/mer_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
-//! | [`Middleware`] | [`Authentication`](/mer_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
-//! | [`Middleware`] | [`Router`](/mer_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
+//! | [`Backend`]    | [`Http`](/merfolk_backend_http)                        | Communicates via Http and in `json` format.                                                                              |
+//! | [`Backend`]    | [`InProcess`](/merfolk_backend_in_process)             | Communicates via [`tokio`](tokio) [`channels`](tokio::sync::mpsc::channel) in `json` format (mostly used for testing purposes). |
+//! | [`Backend`]    | [`SerialPort`](/merfolk_backend_serialport)            | Communicates via serial port (using the [`serialport`](serialport) library) in [`ron`](ron) format.                                          |
+//! | [`Frontend`]   | [`Derive`](/merfolk_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
+//! | [`Frontend`]   | [`Duplex`](/merfolk_frontend_duplex)                   | Allows for different frontends for calling and receiving RPCs.                                                            |
+//! | [`Frontend`]   | [`Logger`](/merfolk_frontend_logger)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
+//! | [`Frontend`]   | [`Register`](/merfolk_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
+//! | [`Middleware`] | [`Authentication`](/merfolk_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
+//! | [`Middleware`] | [`Router`](/merfolk_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
 //!
 //!
 //!
-//! # Develop a Module for [`mer`]
+//! # Develop a Module for [`Mer`] (called a `Folk`)
 //! If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`], [`Frontend`] or [`Middleware`] trait.
 //!
 //! For examples please see the [provided modules](#provided-modules)
-//!
+//! <--
 //! [`Backend`]: interfaces::Backend
 //! [`Frontend`]: interfaces::Frontend
 //! [`Middleware`]: interfaces::Middleware
-//! [`mer`]: crate
+//! [`merfolk`]: crate
+//! -->
 
 extern crate alloc;
 
@@ -187,7 +192,7 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
-/// Error type for `mer` errors. Derived from `thiserror` with `std` feature.
+/// Error type for [`Mer`] errors. Derived from `thiserror` with `std` feature.
 pub enum Error {
   #[cfg_attr(feature = "std", error("mutex was poisoned"))]
   Lock,
@@ -335,12 +340,12 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
   /// ```no_run
   /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
   /// # fn main() {
-  /// #   let mer = mer::Mer::builder()
-  /// #     .backend(mer_backend_http::Http::builder().build().unwrap())
-  /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  /// #   let merfolk = merfolk::Mer::builder()
+  /// #     .backend(merfolk_backend_http::Http::builder().build().unwrap())
+  /// #     .frontend(merfolk_frontend_register::Register::builder().build().unwrap())
   /// #     .build()
   /// #     .unwrap();
-  /// let result: i32 = mer.frontend(|f| f.call("add", &(1, 2)).unwrap()).unwrap();
+  /// let result: i32 = merfolk.frontend(|f| f.call("add", &(1, 2)).unwrap()).unwrap();
   /// # }
   /// ```
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>
@@ -359,12 +364,12 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
   /// ```no_run
   /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
   /// # fn main() {
-  /// #   let mer = mer::Mer::builder()
-  /// #     .backend(mer_backend_http::Http::builder().build().unwrap())
-  /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  /// #   let merfolk = merfolk::Mer::builder()
+  /// #     .backend(merfolk_backend_http::Http::builder().build().unwrap())
+  /// #     .frontend(merfolk_frontend_register::Register::builder().build().unwrap())
   /// #     .build()
   /// #     .unwrap();
-  /// mer.backend(|b| b.stop().unwrap()).unwrap();
+  /// merfolk.backend(|b| b.stop().unwrap()).unwrap();
   /// # }
   /// ```
   pub fn backend<T, R>(&self, access: T) -> Result<R, Error>
@@ -382,16 +387,16 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
   ///
   /// ```no_run
   /// # use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-  /// # use mer_backend_http::Http;
-  /// # use mer_middleware_authentication::Authentication;
+  /// # use merfolk_backend_http::Http;
+  /// # use merfolk_middleware_authentication::Authentication;
   /// # fn main() {
-  /// #   let mer = mer::Mer::builder()
-  /// #     .backend(mer_backend_http::Http::builder().build().unwrap())
-  /// #     .frontend(mer_frontend_register::Register::builder().build().unwrap())
+  /// #   let merfolk = merfolk::Mer::builder()
+  /// #     .backend(merfolk_backend_http::Http::builder().build().unwrap())
+  /// #     .frontend(merfolk_frontend_register::Register::builder().build().unwrap())
   /// #     .middlewares(vec![Authentication::builder().auth(("user".into(), "pwd".into())).build_boxed().unwrap()])
   /// #     .build()
   /// #     .unwrap();
-  /// mer.middlewares(0, |_m: &mut Authentication<Http>| {}).unwrap();
+  /// merfolk.middlewares(0, |_m: &mut Authentication<Http>| {}).unwrap();
   /// # }
   /// ```
   pub fn middlewares<M, T, R>(&self, index: usize, access: T) -> Result<R, Error>

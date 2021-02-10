@@ -1,5 +1,5 @@
 [package]
-name = "mer_backend_serialport"
+name = "merfolk_backend_serialport"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
@@ -12,7 +12,7 @@ default = []
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = "0.4"
-mer = { path = "../../mer" }
+merfolk = { path = "../../merfolk" }
 serde = { version = "1.0.116", features = ["derive"] }
 ron = "0.6"
 serialport = "4.0"
@@ -20,7 +20,7 @@ thiserror = "1.0"
 tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync", "time"] }
 
 [dev-dependencies]
-mer_frontend_register = { path = "../../frontends/register" }
+merfolk_frontend_register = { path = "../../frontends/register" }
 
 rand = "0.8"
 

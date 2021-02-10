@@ -1,5 +1,5 @@
 [package]
-name = "mer_frontend_derive"
+name = "merfolk_frontend_derive"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
@@ -17,13 +17,13 @@ std = [
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", default-features = false }
-mer = { path = "../../../mer" }
-mer_frontend_derive_macros = { path = "../macros" }
+merfolk = { path = "../../../merfolk" }
+merfolk_frontend_derive_macros = { path = "../macros" }
 thiserror = { version = "1.0", optional = true }
 
 [dev-dependencies]
-mer_backend_in_process = { path = "../../../backends/in-process" }
-mer_backend_http = { path = "../../../backends/http" }
+merfolk_backend_in_process = { path = "../../../backends/in-process" }
+merfolk_backend_http = { path = "../../../backends/http" }
 
 hyper = "0.14"
 serde = "1.0"

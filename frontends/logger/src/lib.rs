@@ -1,4 +1,4 @@
-use mer::{
+use merfolk::{
   interfaces::{Backend, Frontend},
   Call, Reply,
 };
@@ -58,7 +58,7 @@ impl<'a, B: Backend> LoggerBuilder<'a, B> {
   }
 
   pub fn ignore_targets(self, mut value: Vec<&'static str>) -> Self {
-    value.push("mer");
+    value.push("merfolk");
 
     self.ignore_targets_setter(Arc::new(Some(value)))
   }
