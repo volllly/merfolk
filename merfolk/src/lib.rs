@@ -8,7 +8,7 @@
 //!
 //! The architecture is split into three modular parts: the [`Backend`], the [`Frontend`] and optional [`Middleware`]s.
 //!
-//! [`merfolk] is a collection of parts. The main part is [`Mer`](crate::Mer) the orchestrator type and a [collection](#provided-modules) of [`Backend`]s, the [`Frontend`]s and [`Middleware`]s (the `Folk`).
+//! [`merfolk`] is a collection of parts. The main part is [`Mer`](crate::Mer) the orchestrator type and a [collection](#provided-modules) of [`Backend`]s, the [`Frontend`]s and [`Middleware`]s (the `Folk`).
 //!
 //! [`Mer`] can act as a server or a client or both depending on the configuration.
 //!
@@ -170,6 +170,7 @@
 //! [`Backend`]: interfaces::Backend
 //! [`Frontend`]: interfaces::Frontend
 //! [`Middleware`]: interfaces::Middleware
+//! [`Mer`]: crate::Mer
 //! [`merfolk`]: crate
 
 extern crate alloc;
