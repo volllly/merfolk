@@ -1,12 +1,15 @@
 [package]
 name = "merfolk"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
 edition = "2018"
 license = "MIT"
-description = "A minimal extensible RPC framework."
+description = "A minimal extensible RPC framework. Cross platform and `no_std`"
 repository = "https://github.com/volllly/merfolk"
 readme = "../README.md"
+documentation = "https://docs.rs/merfolk/"
+keywords = ["RPC", "mer", "no_std"]
+
 [features]
 
 default = ["std"]

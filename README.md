@@ -1,6 +1,7 @@
 # merfolk
 
 [![CI](https://github.com/volllly/merfolk/workflows/CI/badge.svg?branch=main)](https://github.com/volllly/merfolk/actions?query=workflow%3ACI)
+[![docs](https://docs.rs/merfolk/badge.svg)](https://docs.rs/merfolk/)
 
 [`merfolk`] is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**.
 
