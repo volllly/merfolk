@@ -23,7 +23,7 @@ std = [
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", default-features = false }
-merfolk = "0"
+merfolk = { path = "../../merfolk" }
 serde = "1.0.116"
 
 [dev-dependencies]

@@ -16,7 +16,7 @@ keywords = ["RPC", "merfolk", "log"]
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", default-features = false }
-merfolk = { version = "0", features = ["std"] }
+merfolk = { path = "../../merfolk", features = ["std"] }
 serde = "1.0.116"
 thiserror = "1.0"
 

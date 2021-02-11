@@ -24,7 +24,7 @@ std = [
 anyhow = "1.0"
 derive_builder = "0.10.0-alpha"
 log = { version = "0.4", default-features = false }
-merfolk = "0"
+merfolk =  { path = "../../../merfolk" }
 merfolk_frontend_derive_macros = "0"
 thiserror = { version = "1.0", optional = true }
 
