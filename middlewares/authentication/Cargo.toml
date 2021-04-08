@@ -19,7 +19,7 @@ log = "0.4"
 merfolk = { path = "../../merfolk", features=["std"] }
 serde = { version = "1.0.116", features=["derive"] }
 thiserror = "1.0"
-wildmatch = "1.0"
+wildmatch = "2.1"
 
 [dev-dependencies]
 merfolk_frontend_register = { path = "../../frontends/register" }
