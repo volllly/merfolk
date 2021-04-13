@@ -1,7 +1,7 @@
 #![doc(issue_tracker_base_url = "https://github.com/volllly/merfolk/issues/")]
 #![doc(html_root_url = "https://github.com/volllly/merfolk")]
-//#[doc(include = "../README.md")]
-//#[doc = include_str!("../../README.md")]
+// #[doc(include = "../README.md")]
+// #[doc = include_str!("../../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 //! [`merfolk`] is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**. 

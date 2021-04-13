@@ -81,12 +81,12 @@ impl log::Log for LoggerInstance {
     metadata.level() <= self.level
       && !metadata.target().is_empty()
       && if let Some(ignore_targets) = self.ignore_targets.as_ref() {
-        !ignore_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
+        !ignore_targets.iter().any(|t| WildMatch::new(t).matches(&metadata.target()))
       } else {
         true
       }
       && if let Some(allow_targets) = self.allow_targets.as_ref() {
-        allow_targets.iter().any(|t| WildMatch::new(t).is_match(&metadata.target()))
+        allow_targets.iter().any(|t| WildMatch::new(t).matches(&metadata.target()))
       } else {
         true
       }

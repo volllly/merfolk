@@ -6,12 +6,12 @@ fn add(a: i32, b: i32) -> i32 {
   a + b
 }
 
-struct MockTTY {
+struct MockTty {
   pub m: Box<dyn serialport::SerialPort>,
   pub s: Box<dyn serialport::SerialPort>,
 }
 
-impl serialport::SerialPort for MockTTY {
+impl serialport::SerialPort for MockTty {
   fn name(&self) -> Option<String> {
     Some(format!(
       "{:?} -> {:?}",
@@ -131,7 +131,7 @@ impl serialport::SerialPort for MockTTY {
   }
 }
 
-impl std::io::Write for MockTTY {
+impl std::io::Write for MockTty {
   fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
     self.m.write(buf)
   }
@@ -141,7 +141,7 @@ impl std::io::Write for MockTTY {
   }
 }
 
-impl std::io::Read for MockTTY {
+impl std::io::Read for MockTty {
   fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
     self.s.read(buf)
   }
@@ -157,12 +157,12 @@ fn register_serialport() {
 
   let pairs = (serialport::TTYPort::pair().unwrap(), serialport::TTYPort::pair().unwrap());
 
-  let port_caller = MockTTY {
+  let port_caller = MockTty {
     m: Box::new(pairs.0 .0),
     s: Box::new(pairs.1 .1),
   };
 
-  let port_receiver = MockTTY {
+  let port_receiver = MockTty {
     m: Box::new(pairs.1 .0),
     s: Box::new(pairs.0 .1),
   };

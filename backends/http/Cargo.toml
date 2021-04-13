@@ -20,9 +20,9 @@ http2 = ["hyper/http2"]
 
 [dependencies]
 anyhow = "1.0"
-derive_builder = "0.10.0-alpha"
+derive_builder = "0.10.0"
 log = "0.4"
-merfolk = { path = "../../merfolk", features = ["std"] }
+merfolk = { path = "../../merfolk", features = ["std"], version = "0.1" }
 thiserror = "1.0"
 serde = "1.0.116"
 serde_json = "1.0.57"

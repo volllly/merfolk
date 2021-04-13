@@ -184,7 +184,7 @@ pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, 
           .payload;
 
           let deser_reply = __B::deserialize::<#old_return_type>(&reply);
-          Ok(deser_reply?)
+          deser_reply
         }
       }
     })

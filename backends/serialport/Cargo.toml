@@ -16,9 +16,9 @@ default = []
 
 [dependencies]
 anyhow = "1.0"
-derive_builder = "0.10.0-alpha"
+derive_builder = "0.10.0"
 log = "0.4"
-merfolk = { path = "../../merfolk", features = ["std"] }
+merfolk = { path = "../../merfolk", features = ["std"], version = "0.1" }
 serde = { version = "1.0.116", features = ["derive"] }
 ron = "0.6"
 serialport = "4.0"

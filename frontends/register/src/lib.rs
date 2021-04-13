@@ -86,13 +86,13 @@ impl<'a, B: Backend> Register<'a, B> {
   pub fn call<C: serde::Serialize, R: for<'de> serde::Deserialize<'de>>(&self, procedure: &str, payload: &C) -> Result<R> {
     trace!("call procedure");
 
-    Ok(B::deserialize(
+    B::deserialize(
       &self.call.as_ref().ok_or(Error::CallNotRegistered)?(Call {
         procedure: procedure.to_string(),
         payload: B::serialize(&payload)?,
       })?
       .payload,
-    )?)
+    )
   }
 }
 

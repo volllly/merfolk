@@ -100,7 +100,7 @@ impl<'staic, B: Backend + 'static> Middleware for Authentication<'static, B> {
 
       if let Some(scopes) = &self.scopes {
         scopes.iter().for_each(|s| {
-          if WildMatch::new(&s.0).is_match(call.procedure.as_str()) {
+          if WildMatch::new(&s.0).matches(call.procedure.as_str()) {
             scope.push(s.1.to_string())
           };
         });
