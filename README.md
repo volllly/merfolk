@@ -3,31 +3,33 @@
 [![CI](https://github.com/volllly/merfolk/workflows/CI/badge.svg?branch=main)](https://github.com/volllly/merfolk/actions?query=workflow%3ACI)
 [![docs](https://docs.rs/merfolk/badge.svg)](https://docs.rs/merfolk/)
 
-[`merfolk`] is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**.
+<!-- cargo-sync-readme start -->
 
-The architecture is split into three modular parts: the [`Backend`], the [`Frontend`] and optional [`Middleware`]s.
+[`merfolk`](https://docs.rs/merfolk/latest/merfolk/) is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**.
 
-[`merfolk`] is a collection of parts. The main part is [`Mer`](crate::Mer) the orchestrator type and a [collection](#provided-modules) of [`Backend`]s, the [`Frontend`]s and [`Middleware`]s (the `Folk`).
+The architecture is split into three modular parts: the [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html), the [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html) and optional [`Middleware`](https://docs.rs/merfolk/latest/merfolk/interfaces/middleware/trait.Middleware.html)s.
 
-[`Mer`] can act as a server or a client or both depending on the configuration.
+[`merfolk`](https://docs.rs/merfolk/latest/merfolk/) is a collection of two things. One such thing is [`merfolk`](https://docs.rs/merfolk/latest/merfolk/) containing [`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html) the orchestrator type traits and the other thing is the `Folk` a [collection](#provided-modules) of [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html)s, the [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html)s and [`Middleware`](https://docs.rs/merfolk/latest/merfolk/interfaces/middleware/trait.Middleware.html)s for [`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html).
 
-### [`Backend`]
-The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`] this can happen over different channels (e.g. http, serial port, etc.).
-The [`Backend`] serializes and deserializes the RPCs using the [`serde`] framework.
+[`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html) can act as a server or a client or both depending on the configuration.
 
-### Frontend
-The [`Frontend`] is providing an API to make RPCs and to receive them. The way RPCs are made by the client and and handled the server depend on the frontend [`Frontend`]
+## [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html),
+The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html), this can happen over different channels (e.g. http, serial port, etc.).
+The [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html), serializes and deserializes the RPCs using the [`serde`](https://docs.rs/serde) framework.
 
-### Middleware
-A [`Middleware`] can modify sent and received RPCs and replies. Or perform custom actions on a sent or received RPC and reply.
+## Frontend
+The [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html) is providing an API to make RPCs and to receive them. The way RPCs are made by the client and and handled the server depend on the [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html)
 
-## Use [`Mer`]
-[`Mer`] needs a [`Backend`] and a [`Frontend`] to operate.
-The following examples uses the [`Http`](/merfolk_backend_http) [`Backend`] and the [`Register`](/merfolk_frontend_register) and [`Derive`](/merfolk_frontend_derive) [`Frontend`] (see their documentation on how to use them).
+## Middleware
+A [`Middleware`](https://docs.rs/merfolk/latest/merfolk/interfaces/middleware/trait.Middleware.html) can modify sent and received RPCs and replies. Or perform custom actions on a sent or received RPC and reply.
 
-How to use [`Mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
+# Use [`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html)
+[`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html) needs a [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html), and a [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html) to operate.
+The following examples uses the [`Http`](https://docs.rs/merfolk_backend_http) [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html), and the [`Register`](https://docs.rs/merfolk_frontend_register) and [`Derive`](https://docs.rs/merfolk_frontend_derive) [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html) (see their documentation on how to use them).
 
-### Server
+How to use [`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html) (how to setup the server and client) depends strongly on the used [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html).
+
+## Server
 ```rust
 // remote procedure definitions
 fn add(a: i32, b: i32) -> i32 {
@@ -65,7 +67,7 @@ frontend.register("subtract", |(a, b)| subtract(a, b)).unwrap();
 let _merfolk = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
 ```
 
-### Client
+## Client
 ```rust
 // build the backend
 let backend = Http::builder()
@@ -85,7 +87,7 @@ let result_add: Result<i32> = merfolk.frontend(|f| f.call("add", &(1, 2))).unwra
 let result_subtract: Result<i32> = merfolk.frontend(|f| f.call("subtract", &(1, 2))).unwrap();
 ```
 
-## Advanced
+# Advanced
 ```rust
 // remote procedure definitions for server
 #[frontend()]
@@ -111,7 +113,7 @@ let caller_frontend = Register::builder().build().unwrap();
 // build the server frontend
 let receiver_frontend = Receiver::builder().build().unwrap();
 
-// combine the frontends using the [`Duplex`](/merfolk_frontend_derive) frontend
+// combine the frontends using the [`Duplex`](https://docs.rs/merfolk_frontend_derive) frontend
 let frontend = Duplex::builder().caller(caller_frontend).receiver(receiver_frontend).build().unwrap();
 
 // build router middleware
@@ -124,28 +126,25 @@ let merfolk = Mer::builder().backend(backend).frontend(frontend).middlewares(vec
 let result: String = merfolk.frontend(|f| f.caller.call("some_remote_function", &()).unwrap()).unwrap();
 ```
 
-## Provided Modules
-| Type           | Name                                              | Description |
-|----------------|---------------------------------------------------|---|
-| [`Backend`]    | [`Http`](/merfolk_backend_http)                        | Communicates via Http and in `json` format.                                                                              |
-| [`Backend`]    | [`InProcess`](/merfolk_backend_in_process)             | Communicates via [`tokio`](tokio) [`channels`](tokio::sync::mpsc::channel) in `json` format (mostly used for testing purposes). |
-| [`Backend`]    | [`SerialPort`](/merfolk_backend_serialport)            | Communicates via serial port (using the [`serialport`](serialport) library) in [`ron`](ron) format.                                          |
-| [`Frontend`]   | [`Derive`](/merfolk_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
-| [`Frontend`]   | [`Duplex`](/merfolk_frontend_duplex)                   | Allows for different frontends for calling and receiving RPCs.                                                            |
-| [`Frontend`]   | [`Logger`](/merfolk_frontend_logger)                   | Provides a frontend using the [`log`] facade on the client side.                                                         |
-| [`Frontend`]   | [`Register`](/merfolk_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
-| [`Middleware`] | [`Authentication`](/merfolk_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
-| [`Middleware`] | [`Router`](/merfolk_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
+# Provided Modules
+| Type                                                      | Name                                                                    | Description |
+|-----------------------------------------------------------|-------------------------------------------------------------------------|-------------|
+| [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html)          | [`Http`](https://docs.rs/merfolk_backend_http)                          | Communicates via Http and in `json` format. |
+| [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html)          | [`InProcess`](https://docs.rs/merfolk_backend_in_process)               | Communicates via [`tokio`](https://docs.rs/tokio) [`channels`](https://docs.rs/tokio/1.2.0/tokio/sync/mpsc/fn.channel.html) in `json` format (mostly used for testing purposes). |
+| [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html)          | [`SerialPort`](https://docs.rs/merfolk_backend_serialport)              | Communicates via serial port (using the [`serialport`](https://docs.rs/serialport) library) in [`ron`](https://docs.rs/ron) format. |
+| [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html)       | [`Derive`](https://docs.rs/merfolk_frontend_derive)                     | Provides derive macros to derive a frontend from trait definitions. |
+| [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html)       | [`Duplex`](https://docs.rs/merfolk_frontend_duplex)                     | Allows for different frontends for calling and receiving RPCs. |
+| [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html)       | [`Logger`](https://docs.rs/merfolk_frontend_logger)                     | Provides a frontend using the [`log`](https://docs.rs/log) facade on the client side. |
+| [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html)       | [`Register`](https://docs.rs/merfolk_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side. |
+| [`Middleware`](https://docs.rs/merfolk/latest/merfolk/interfaces/middleware/trait.Middleware.html) | [`Authentication`](https://docs.rs/merfolk_middleware_authentication)   | Adds simple authentication and scopes. |
+| [`Middleware`](https://docs.rs/merfolk/latest/merfolk/interfaces/middleware/trait.Middleware.html) | [`Router`](https://docs.rs/merfolk_middleware_router)                   | Adds simple routing of procedures based on the procedure name. |
 
 
 
-## Develop a Module for [`Mer`] (called a `Folk`)
-If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`], [`Frontend`] or [`Middleware`] trait.
+# Develop a Module for [`Mer`](https://docs.rs/merfolk/latest/merfolk/struct.Mer.html) (called a `Folk`)
+If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`](https://docs.rs/merfolk/latest/merfolk/interfaces/backend/trait.Backend.html), [`Frontend`](https://docs.rs/merfolk/latest/merfolk/interfaces/frontend/trait.Frontend.html) or [`Middleware`](https://docs.rs/merfolk/latest/merfolk/interfaces/middleware/trait.Middleware.html) trait.
 
 For examples please see the [provided modules](#provided-modules)
 
-[`Backend`]: interfaces::Backend
-[`Frontend`]: interfaces::Frontend
-[`Middleware`]: interfaces::Middleware
-[`Mer`]: crate::Mer
-[`merfolk`]: crate
+
+<!-- cargo-sync-readme end -->

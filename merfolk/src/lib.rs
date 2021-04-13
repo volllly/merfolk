@@ -4,29 +4,29 @@
 // #[doc = include_str!("../../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-//! [`merfolk`] is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**. 
+//! [`merfolk`](crate) is a **m**inimal **e**xtensible **r**emote procedure call **f**ramew**o**r**k**.
 //!
-//! The architecture is split into three modular parts: the [`Backend`], the [`Frontend`] and optional [`Middleware`]s.
+//! The architecture is split into three modular parts: the [`Backend`](crate::interfaces::backend::Backend), the [`Frontend`](crate::interfaces::frontend::Frontend) and optional [`Middleware`](crate::interfaces::middleware::Middleware)s.
 //!
-//! [`merfolk`] is a collection of two things. One such thing is [`merfolk`] containing [`Mer`](crate::Mer) the orchestrator type traits and the other thing is the `Folk` a [collection](#provided-modules) of [`Backend`]s, the [`Frontend`]s and [`Middleware`]s for [`Mer`].
+//! [`merfolk`](crate) is a collection of two things. One such thing is [`merfolk`](crate) containing [`Mer`](crate::Mer) the orchestrator type traits and the other thing is the `Folk` a [collection](#provided-modules) of [`Backend`](crate::interfaces::backend::Backend)s, the [`Frontend`](crate::interfaces::frontend::Frontend)s and [`Middleware`](crate::interfaces::middleware::Middleware)s for [`Mer`](crate::Mer).
 //!
-//! [`Mer`] can act as a server or a client or both depending on the configuration.
+//! [`Mer`](crate::Mer) can act as a server or a client or both depending on the configuration.
 //!
-//! ## [`Backend`]
-//! The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`] this can happen over different channels (e.g. http, serial port, etc.).
-//! The [`Backend`] serializes and deserializes the RPCs using the [`serde`] framework.
+//! ## [`Backend`](crate::interfaces::backend::Backend),
+//! The Backend is responsible for sending and receiving RPCs. Depending on the [`Backend`](crate::interfaces::backend::Backend), this can happen over different channels (e.g. http, serial port, etc.).
+//! The [`Backend`](crate::interfaces::backend::Backend), serializes and deserializes the RPCs using the [`serde`](https://docs.rs/serde) framework.
 //!
 //! ## Frontend
-//! The [`Frontend`] is providing an API to make RPCs and to receive them. The way RPCs are made by the client and and handled the server depend on the frontend [`Frontend`]
+//! The [`Frontend`](crate::interfaces::frontend::Frontend) is providing an API to make RPCs and to receive them. The way RPCs are made by the client and and handled the server depend on the [`Frontend`](crate::interfaces::frontend::Frontend)
 //!
 //! ## Middleware
-//! A [`Middleware`] can modify sent and received RPCs and replies. Or perform custom actions on a sent or received RPC and reply.
+//! A [`Middleware`](crate::interfaces::middleware::Middleware) can modify sent and received RPCs and replies. Or perform custom actions on a sent or received RPC and reply.
 //!
-//! # Use [`Mer`]
-//! [`Mer`] needs a [`Backend`] and a [`Frontend`] to operate.
-//! The following examples uses the [`Http`](/merfolk_backend_http) [`Backend`] and the [`Register`](/merfolk_frontend_register) and [`Derive`](/merfolk_frontend_derive) [`Frontend`] (see their documentation on how to use them).
+//! # Use [`Mer`](crate::Mer)
+//! [`Mer`](crate::Mer) needs a [`Backend`](crate::interfaces::backend::Backend), and a [`Frontend`](crate::interfaces::frontend::Frontend) to operate.
+//! The following examples uses the [`Http`](https://docs.rs/merfolk_backend_http) [`Backend`](crate::interfaces::backend::Backend), and the [`Register`](https://docs.rs/merfolk_frontend_register) and [`Derive`](https://docs.rs/merfolk_frontend_derive) [`Frontend`](crate::interfaces::frontend::Frontend) (see their documentation on how to use them).
 //!
-//! How to use [`Mer`] (how to setup the server and client) depends strongly on the used [`Frontend`].
+//! How to use [`Mer`](crate::Mer) (how to setup the server and client) depends strongly on the used [`Frontend`](crate::interfaces::frontend::Frontend).
 //!
 //! ## Server
 //! ```
@@ -133,7 +133,7 @@
 //! // build the server frontend
 //! let receiver_frontend = Receiver::builder().build().unwrap();
 //!
-//! // combine the frontends using the [`Duplex`](/merfolk_frontend_derive) frontend
+//! // combine the frontends using the [`Duplex`](https://docs.rs/merfolk_frontend_derive) frontend
 //! let frontend = Duplex::builder().caller(caller_frontend).receiver(receiver_frontend).build().unwrap();
 //!
 //! // build router middleware
@@ -148,30 +148,25 @@
 //! ```
 //!
 //! # Provided Modules
-//! | Type           | Name                                              | Description |
-//! |----------------|---------------------------------------------------|---|
-//! | [`Backend`]    | [`Http`](/merfolk_backend_http)                        | Communicates via Http and in `json` format.                                                                              |
-//! | [`Backend`]    | [`InProcess`](/merfolk_backend_in_process)             | Communicates via [`tokio`](/tokio) [`channels`](https://docs.rs/tokio/1.2.0/tokio/sync/mpsc/fn.channel.html) in `json` format (mostly used for testing purposes). |
-//! | [`Backend`]    | [`SerialPort`](/merfolk_backend_serialport)            | Communicates via serial port (using the [`serialport`](/serialport) library) in [`ron`](/ron) format.                                          |
-//! | [`Frontend`]   | [`Derive`](/merfolk_frontend_derive)                   | Provides derive macros to derive a frontend from trait definitions.                                                      |
-//! | [`Frontend`]   | [`Duplex`](/merfolk_frontend_duplex)                   | Allows for different frontends for calling and receiving RPCs.                                                            |
-//! | [`Frontend`]   | [`Logger`](/merfolk_frontend_logger)                   | Provides a frontend using the [`log`](/log) facade on the client side.                                                         |
-//! | [`Frontend`]   | [`Register`](/merfolk_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side.              |
-//! | [`Middleware`] | [`Authentication`](/merfolk_middleware_authentication) | Adds simple authentication and scopes.                                                                                   |
-//! | [`Middleware`] | [`Router`](/merfolk_middleware_router)                 | Adds simple routing of procedures based on the procedure name.                                                           |
+//! | Type                                                      | Name                                                                    | Description |
+//! |-----------------------------------------------------------|-------------------------------------------------------------------------|-------------|
+//! | [`Backend`](crate::interfaces::backend::Backend)          | [`Http`](https://docs.rs/merfolk_backend_http)                          | Communicates via Http and in `json` format. |
+//! | [`Backend`](crate::interfaces::backend::Backend)          | [`InProcess`](https://docs.rs/merfolk_backend_in_process)               | Communicates via [`tokio`](https://docs.rs/tokio) [`channels`](https://docs.rs/tokio/1.2.0/tokio/sync/mpsc/fn.channel.html) in `json` format (mostly used for testing purposes). |
+//! | [`Backend`](crate::interfaces::backend::Backend)          | [`SerialPort`](https://docs.rs/merfolk_backend_serialport)              | Communicates via serial port (using the [`serialport`](https://docs.rs/serialport) library) in [`ron`](https://docs.rs/ron) format. |
+//! | [`Frontend`](crate::interfaces::frontend::Frontend)       | [`Derive`](https://docs.rs/merfolk_frontend_derive)                     | Provides derive macros to derive a frontend from trait definitions. |
+//! | [`Frontend`](crate::interfaces::frontend::Frontend)       | [`Duplex`](https://docs.rs/merfolk_frontend_duplex)                     | Allows for different frontends for calling and receiving RPCs. |
+//! | [`Frontend`](crate::interfaces::frontend::Frontend)       | [`Logger`](https://docs.rs/merfolk_frontend_logger)                     | Provides a frontend using the [`log`](https://docs.rs/log) facade on the client side. |
+//! | [`Frontend`](crate::interfaces::frontend::Frontend)       | [`Register`](https://docs.rs/merfolk_frontend_register)                 | Allows for manually registering procedures on the server side and calling any procedure on the client side. |
+//! | [`Middleware`](crate::interfaces::middleware::Middleware) | [`Authentication`](https://docs.rs/merfolk_middleware_authentication)   | Adds simple authentication and scopes. |
+//! | [`Middleware`](crate::interfaces::middleware::Middleware) | [`Router`](https://docs.rs/merfolk_middleware_router)                   | Adds simple routing of procedures based on the procedure name. |
 //!
 //!
 //!
-//! # Develop a Module for [`Mer`] (called a `Folk`)
-//! If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`], [`Frontend`] or [`Middleware`] trait.
+//! # Develop a Module for [`Mer`](crate::Mer) (called a `Folk`)
+//! If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`](crate::interfaces::backend::Backend), [`Frontend`](crate::interfaces::frontend::Frontend) or [`Middleware`](crate::interfaces::middleware::Middleware) trait.
 //!
 //! For examples please see the [provided modules](#provided-modules)
 //!
-//! [`Backend`]: interfaces::Backend
-//! [`Frontend`]: interfaces::Frontend
-//! [`Middleware`]: interfaces::Middleware
-//! [`Mer`]: crate::Mer
-//! [`merfolk`]: crate
 
 extern crate alloc;
 
