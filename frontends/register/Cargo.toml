@@ -27,7 +27,12 @@ merfolk_backend_http = { path = "../../backends/http" }
 hyper = "0.14"
 rand = "0.8"
 tokio = { version = "1.0", features = ["sync"] }
+criterion = "0.3"
 
 [[test]]
 name = "test"
 path = "test/tests.rs"
+
+[[bench]]
+name = "performance"
+harness = false

@@ -33,7 +33,12 @@ hyper = { version = "0.14", features = ["client", "server", "tcp"] }
 merfolk_frontend_register = { path = "../../frontends/register" }
 
 rand = "0.8"
+criterion = "0.3"
 
 [[test]]
 name = "test"
 path = "test/tests.rs"
+
+[[bench]]
+name = "performance"
+harness = false

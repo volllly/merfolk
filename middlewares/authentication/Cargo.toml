@@ -27,7 +27,12 @@ merfolk_backend_in_process = { path = "../../backends/in-process" }
 
 rand = "0.8"
 tokio = "1.0"
+criterion = "0.3"
 
 [[test]]
 name = "test"
 path = "test/tests.rs"
+
+[[bench]]
+name = "performance"
+harness = false

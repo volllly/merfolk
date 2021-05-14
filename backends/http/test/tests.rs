@@ -46,7 +46,7 @@ fn register_http_duplex() {
     .backend(
       merfolk_backend_http::Http::builder()
         .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8085))
-        .speak("http://localhost:8084".parse::<hyper::Uri>().unwrap())
+        .speak("http://localhost:8086".parse::<hyper::Uri>().unwrap())
         .build()
         .unwrap(),
     )
@@ -58,7 +58,7 @@ fn register_http_duplex() {
     .backend(
       merfolk_backend_http::Http::builder()
         .speak("http://localhost:8085".parse::<hyper::Uri>().unwrap())
-        .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8084))
+        .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8086))
         .build()
         .unwrap(),
     )
