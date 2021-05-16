@@ -9,12 +9,12 @@ use tokio::runtime::Runtime;
 
 use tokio::sync::{
   mpsc,
-  mpsc::{Receiver, Sender},
+  oneshot
 };
 
 use log::trace;
 
-pub type InProcessChannel = (Call<String>, Sender<Result<Reply<String>>>);
+pub type InProcessChannel = (Call<String>, oneshot::Sender<Result<Reply<String>>>);
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -54,14 +54,14 @@ pub struct InProcess {
   handle: Option<tokio::task::JoinHandle<std::convert::Infallible>>,
 
   #[builder(setter(into, strip_option), default = "None")]
-  to: Option<Sender<InProcessChannel>>,
+  to: Option<mpsc::Sender<InProcessChannel>>,
 
   #[builder(setter(into, strip_option, name = "from_setter"), private, default = "None")]
-  from: Option<Arc<tokio::sync::Mutex<Receiver<InProcessChannel>>>>,
+  from: Option<Arc<tokio::sync::Mutex<mpsc::Receiver<InProcessChannel>>>>,
 }
 
 impl InProcessBuilder {
-  pub fn from(self, value: Receiver<InProcessChannel>) -> Self {
+  pub fn from(self, value: mpsc::Receiver<InProcessChannel>) -> Self {
     self.from_setter(Arc::new(tokio::sync::Mutex::new(value)))
   }
 }
@@ -92,7 +92,7 @@ impl InProcess {
           payload: call.payload,
         });
 
-        tx.send(reply).await.unwrap();
+        tx.send(reply).unwrap();
       }
     }));
 
@@ -133,7 +133,7 @@ impl Backend for InProcess {
 
     self.runtime.block_on(async {
       #[allow(clippy::type_complexity)]
-      let (tx, mut rx): (Sender<Result<Reply<String>>>, Receiver<Result<Reply<String>>>) = mpsc::channel(1);
+      let (tx, rx): (oneshot::Sender<Result<Reply<String>>>, oneshot::Receiver<Result<Reply<String>>>) = oneshot::channel();
       self
         .to
         .as_ref()
@@ -148,7 +148,7 @@ impl Backend for InProcess {
         .await
         .map_err(Error::CallerSend)?;
 
-      rx.recv().await.ok_or(Error::CallerRecv)?
+      rx.await?
     })
   }
 
