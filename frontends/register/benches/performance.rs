@@ -15,7 +15,6 @@ pub fn frontend_register(c: &mut Criterion) {
     .procedures(vec![("bench", Register::<InProcess>::make_procedure(|()| ()))].into_iter().collect())
     .build()
     .unwrap();
-  register_caller.register("bench", |()| ()).unwrap();
 
   let (to, from): (Sender<merfolk_backend_in_process::InProcessChannel>, Receiver<merfolk_backend_in_process::InProcessChannel>) = mpsc::channel(1);
 

@@ -146,7 +146,6 @@ impl std::io::Read for MockTty {
 pub fn backend_serialport(c: &mut Criterion) {
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
-  register_caller.register("bench", |()| ()).unwrap();
   register_receiver.register("bench", |()| ()).unwrap();
 
   let pairs = (serialport::TTYPort::pair().unwrap(), serialport::TTYPort::pair().unwrap());

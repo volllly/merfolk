@@ -10,7 +10,6 @@ fn register_in_process() {
 
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
-  register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let (to, from): (Sender<merfolk_backend_in_process::InProcessChannel>, Receiver<merfolk_backend_in_process::InProcessChannel>) = channel(1);

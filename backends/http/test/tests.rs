@@ -9,7 +9,6 @@ fn add(a: i32, b: i32) -> i32 {
 fn register_http() {
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
-  register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let merfolk_caller = Mer::builder()

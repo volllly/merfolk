@@ -152,7 +152,6 @@ impl std::io::Read for MockTty {
 fn register_serialport() {
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
-  register_caller.register("add", |(a, b)| add(a, b)).unwrap();
   register_receiver.register("add", |(a, b)| add(a, b)).unwrap();
 
   let pairs = (serialport::TTYPort::pair().unwrap(), serialport::TTYPort::pair().unwrap());

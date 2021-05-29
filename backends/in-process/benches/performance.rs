@@ -6,7 +6,6 @@ pub fn backend_in_process(c: &mut Criterion) {
 
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
-  register_caller.register("bench", |()| ()).unwrap();
   register_receiver.register("bench", |()| ()).unwrap();
 
   let (to, from): (Sender<merfolk_backend_in_process::InProcessChannel>, Receiver<merfolk_backend_in_process::InProcessChannel>) = channel(1);

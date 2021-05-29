@@ -26,7 +26,6 @@ pub fn middleware_authentication(c: &mut Criterion) {
     .backend(merfolk_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(register_receiver)
     .middlewares(vec![merfolk_middleware_authentication::Authentication::builder()
-      .scopes(vec![("bench".to_string(), "bench".to_string())])
       .authenticator(move |_: (String, String), _: Vec<String>| {
         Ok(())
       })

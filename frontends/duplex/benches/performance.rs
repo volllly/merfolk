@@ -11,8 +11,6 @@ pub fn frontend_duplex(c: &mut Criterion) {
   let register_first_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_first_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
 
-  register_first_caller.register("bench", |()| ()).unwrap();
-
   let register_second_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_second_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
 

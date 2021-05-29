@@ -5,7 +5,6 @@ use criterion::{criterion_group, criterion_main, Criterion};
 pub fn backend_http(c: &mut Criterion) {
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
   let register_receiver = merfolk_frontend_register::Register::builder().build().unwrap();
-  register_caller.register("bench", |()| ()).unwrap();
   register_receiver.register("bench", |()| ()).unwrap();
 
   let merfolk_caller = Mer::builder()
