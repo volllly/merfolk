@@ -17,7 +17,7 @@ std = ["log/std"]
 
 [dependencies]
 anyhow = "1.0"
-darling = "0.13"
+darling = "0.14"
 log = { version = "0.4", default-features = false }
 proc-macro2 = "1.0"
 quote = "1.0"
