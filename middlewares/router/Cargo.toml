@@ -26,7 +26,7 @@ merfolk_backend_in_process = { path = "../../backends/in-process" }
 merfolk_middleware_authentication = { path = "../../middlewares/authentication" }
 
 rand = "0.8"
-tokio = "1.0"
+tokio = "1.20"
 criterion = "0.3"
 
 [[test]]

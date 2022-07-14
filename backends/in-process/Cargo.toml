@@ -20,7 +20,7 @@ merfolk = { path = "../../merfolk", features = ["std"], version = "0.1" }
 serde = "1.0.139"
 serde_json = "1.0.82"
 thiserror = "1.0"
-tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync"] }
+tokio = { version = "1.20", features = ["rt", "rt-multi-thread", "sync"] }
 
 [dev-dependencies]
 merfolk_frontend_register = { path = "../../frontends/register" }
