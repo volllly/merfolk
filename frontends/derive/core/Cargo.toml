@@ -22,7 +22,7 @@ std = [
 
 [dependencies]
 anyhow = "1.0"
-derive_builder = "0.10.0"
+derive_builder = "0.11.2"
 log = { version = "0.4", default-features = false }
 merfolk =  { path = "../../../merfolk", version = "0.1" }
 merfolk_frontend_derive_macros = { path = "../macros", version = "0.1" }
