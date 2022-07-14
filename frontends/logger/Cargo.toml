@@ -17,7 +17,7 @@ anyhow = "1.0"
 derive_builder = "0.10.0"
 log = { version = "0.4", features = ["std"] }
 merfolk = { path = "../../merfolk", features = ["std"], version = "0.1" }
-serde = "1.0.116"
+serde = "1.0.139"
 thiserror = "1.0"
 wildmatch = "2.1"
 
