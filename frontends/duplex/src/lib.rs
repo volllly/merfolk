@@ -2,14 +2,12 @@
 
 use std::marker::PhantomData;
 
+use anyhow::Result;
+use log::trace;
 use merfolk::{
   interfaces::{Backend, Frontend},
   Call, Reply,
 };
-
-use anyhow::Result;
-
-use log::trace;
 
 #[derive(derive_builder::Builder)]
 #[builder(pattern = "owned")]

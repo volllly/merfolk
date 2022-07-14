@@ -1,6 +1,6 @@
-use super::Backend;
-
 use anyhow::Result;
+
+use super::Backend;
 
 /// [`Middleware`]s are used to Modify RPCs or to add extra functionality to the framework.
 ///

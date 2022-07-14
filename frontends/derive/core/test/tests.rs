@@ -1,5 +1,6 @@
-use merfolk::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+use merfolk::*;
 
 #[test]
 fn derive_in_process() {

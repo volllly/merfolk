@@ -1,18 +1,13 @@
-use merfolk::{interfaces::Backend, Call, Reply};
-
-use anyhow::Result;
-use thiserror::Error;
-
 use std::sync::Arc;
 
-use tokio::runtime::Runtime;
-
-use tokio::sync::{
-  mpsc,
-  oneshot
-};
-
+use anyhow::Result;
 use log::trace;
+use merfolk::{interfaces::Backend, Call, Reply};
+use thiserror::Error;
+use tokio::{
+  runtime::Runtime,
+  sync::{mpsc, oneshot},
+};
 
 pub type InProcessChannel = (Call<String>, oneshot::Sender<Result<Reply<String>>>);
 
@@ -121,7 +116,7 @@ impl Backend for InProcess {
   {
     trace!("register receiver");
 
-    self.receiver = Some(Arc::new(move |call: Call<String>| receiver(call)));
+    self.receiver = Some(Arc::new(receiver));
 
     self.start().ok();
 
@@ -164,7 +159,7 @@ impl Backend for InProcess {
   {
     trace!("deserialize from");
 
-    serde_json::from_str(&from).map_err(|e| Error::Deserialize(e).into())
+    serde_json::from_str(from).map_err(|e| Error::Deserialize(e).into())
   }
 }
 

@@ -1,6 +1,5 @@
-use merfolk::*;
-
 use criterion::{criterion_group, criterion_main, Criterion};
+use merfolk::*;
 
 pub fn middleware_authentication(c: &mut Criterion) {
   use tokio::sync::{
@@ -18,7 +17,10 @@ pub fn middleware_authentication(c: &mut Criterion) {
   let merfolk_caller = Mer::builder()
     .backend(merfolk_backend_in_process::InProcess::builder().to(to).build().unwrap())
     .frontend(register_caller)
-    .middlewares(vec![merfolk_middleware_authentication::Authentication::builder().auth(("u".to_string(), "p".to_string())).build_boxed().unwrap()])
+    .middlewares(vec![merfolk_middleware_authentication::Authentication::builder()
+      .auth(("u".to_string(), "p".to_string()))
+      .build_boxed()
+      .unwrap()])
     .build()
     .unwrap();
 
@@ -26,15 +28,17 @@ pub fn middleware_authentication(c: &mut Criterion) {
     .backend(merfolk_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(register_receiver)
     .middlewares(vec![merfolk_middleware_authentication::Authentication::builder()
-      .authenticator(move |_: (String, String), _: Vec<String>| {
-        Ok(())
-      })
+      .authenticator(move |_: (String, String), _: Vec<String>| Ok(()))
       .build_boxed()
       .unwrap()])
     .build()
     .unwrap();
 
-  c.bench_function("middleware_authentication", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.call("bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("middleware_authentication", |b| {
+    b.iter(|| {
+      merfolk_caller.frontend::<_, ()>(|f| f.call("bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, middleware_authentication);

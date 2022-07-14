@@ -1,13 +1,11 @@
-use merfolk::{interfaces::Backend, Call, Reply};
+use std::{fmt::Debug, sync::Arc};
 
 use anyhow::Result;
+use log::{debug, error, info, trace};
+use merfolk::{interfaces::Backend, Call, Reply};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-use std::{fmt::Debug, sync::Arc};
 use tokio::{runtime::Runtime, sync::Mutex};
-
-use log::{debug, error, info, trace};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -142,7 +140,7 @@ impl SerialPort {
                     Ok(_) => {}
                     Err(e) => {
                       for _ in 0..2 {
-                        match port_gate.write(&("r:".to_string() + &Self::serialize(&Err::<SelfReply, _>(e.to_string())).unwrap() + "\r\n").as_bytes()) {
+                        match port_gate.write(("r:".to_string() + &Self::serialize(&Err::<SelfReply, _>(e.to_string())).unwrap() + "\r\n").as_bytes()) {
                           Ok(n) => {
                             debug!("{} sent r: {} bytes", port_gate.name().unwrap_or_else(|| "".to_string()), n);
                             break;
@@ -179,7 +177,7 @@ impl SerialPort {
                   };
 
                   for _ in 0..2 {
-                    match port_gate.write(&self_reply_string.as_bytes()) {
+                    match port_gate.write(self_reply_string.as_bytes()) {
                       Ok(n) => {
                         debug!("{} sent r: {} bytes", port_gate.name().unwrap_or_else(|| "".to_string()), n);
                         break;
@@ -241,7 +239,7 @@ impl Backend for SerialPort {
     }
 
     let port = Arc::clone(&self.port);
-    let reply_queue = Arc::clone(&self.reply_queue.as_ref().unwrap());
+    let reply_queue = Arc::clone(self.reply_queue.as_ref().unwrap());
 
     self.runtime.block_on(async move {
       let self_call = SelfCall {
@@ -257,7 +255,7 @@ impl Backend for SerialPort {
 
         port_name = port_gate.name().unwrap_or_else(|| "".to_string());
 
-        written = port_gate.write(&self_call_string.as_bytes());
+        written = port_gate.write(self_call_string.as_bytes());
       }
 
       match written {
@@ -291,7 +289,7 @@ impl Backend for SerialPort {
   {
     trace!("deserialize from");
 
-    ron::de::from_str(&from).map_err(|e| Error::Deserialize(e).into())
+    ron::de::from_str(from).map_err(|e| Error::Deserialize(e).into())
   }
 }
 

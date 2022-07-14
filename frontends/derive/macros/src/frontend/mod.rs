@@ -51,7 +51,9 @@ pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, 
     .collect();
 
   let mut impl_generic_def = trait_generics.clone();
-  impl_generic_def.params.insert(0, syn::parse_quote! { __B: ::merfolk_frontend_derive::reexports::merfolk::interfaces::Backend });
+  impl_generic_def
+    .params
+    .insert(0, syn::parse_quote! { __B: ::merfolk_frontend_derive::reexports::merfolk::interfaces::Backend });
   impl_generic_def.params.insert(0, syn::parse_quote! { '__a });
 
   let mut impl_generics = trait_generics.clone();
@@ -237,7 +239,9 @@ pub fn expand_struct(input: &syn::ItemStruct) -> Result<TokenStream, Vec<syn::Er
   };
 
   let mut impl_generic_def = struct_generics.clone();
-  impl_generic_def.params.insert(0, syn::parse_quote! { __B: ::merfolk_frontend_derive::reexports::merfolk::interfaces::Backend });
+  impl_generic_def
+    .params
+    .insert(0, syn::parse_quote! { __B: ::merfolk_frontend_derive::reexports::merfolk::interfaces::Backend });
   impl_generic_def.params.insert(0, syn::parse_quote! { '__a });
 
   let mut impl_generics = struct_generics.clone();

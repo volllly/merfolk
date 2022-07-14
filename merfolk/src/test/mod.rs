@@ -1,14 +1,12 @@
-use crate::{
-  interfaces::{Backend, Frontend},
-  Mer,
-};
-
-use crate::{Call, Reply};
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
 
 use anyhow::Result;
 
-#[cfg(not(feature = "std"))]
-use alloc::string::String;
+use crate::{
+  interfaces::{Backend, Frontend},
+  Call, Mer, Reply,
+};
 
 struct MockBackend {}
 

@@ -1,16 +1,13 @@
+use std::{marker::PhantomData, sync::Arc};
+
+use anyhow::Result;
+use log::{Level, Metadata, Record};
 use merfolk::{
   interfaces::{Backend, Frontend},
   Call, Reply,
 };
-
-use wildmatch::WildMatch;
-
-use std::{marker::PhantomData, sync::Arc};
-
-use anyhow::Result;
 use thiserror::Error;
-
-use log::{Level, Metadata, Record};
+use wildmatch::WildMatch;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -81,12 +78,12 @@ impl log::Log for LoggerInstance {
     metadata.level() <= self.level
       && !metadata.target().is_empty()
       && if let Some(ignore_targets) = self.ignore_targets.as_ref() {
-        !ignore_targets.iter().any(|t| WildMatch::new(t).matches(&metadata.target()))
+        !ignore_targets.iter().any(|t| WildMatch::new(t).matches(metadata.target()))
       } else {
         true
       }
       && if let Some(allow_targets) = self.allow_targets.as_ref() {
-        allow_targets.iter().any(|t| WildMatch::new(t).matches(&metadata.target()))
+        allow_targets.iter().any(|t| WildMatch::new(t).matches(metadata.target()))
       } else {
         true
       }

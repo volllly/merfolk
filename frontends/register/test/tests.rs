@@ -1,7 +1,8 @@
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use merfolk::*;
 use merfolk_backend_in_process::InProcess;
 use merfolk_frontend_register::Register;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 fn add(a: i32, b: i32) -> i32 {
   a + b

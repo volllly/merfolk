@@ -1,6 +1,5 @@
-use merfolk::*;
-
 use criterion::{criterion_group, criterion_main, Criterion};
+use merfolk::*;
 
 pub fn frontend_duplex(c: &mut Criterion) {
   use tokio::sync::{
@@ -21,7 +20,13 @@ pub fn frontend_duplex(c: &mut Criterion) {
 
   let merfolk_first = Mer::builder()
     .backend(merfolk_backend_in_process::InProcess::builder().to(to_first).from(from_second).build().unwrap())
-    .frontend(merfolk_frontend_duplex::Duplex::builder().caller(register_first_caller).receiver(register_first_receiver).build().unwrap())
+    .frontend(
+      merfolk_frontend_duplex::Duplex::builder()
+        .caller(register_first_caller)
+        .receiver(register_first_receiver)
+        .build()
+        .unwrap(),
+    )
     .build()
     .unwrap();
 
@@ -37,7 +42,11 @@ pub fn frontend_duplex(c: &mut Criterion) {
     .build()
     .unwrap();
 
-  c.bench_function("frontend_duplex", |b| b.iter(|| { let _: () = merfolk_first.frontend(|f| f.caller.call("bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("frontend_duplex", |b| {
+    b.iter(|| {
+      merfolk_first.frontend::<_, ()>(|f| f.caller.call("bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, frontend_duplex);

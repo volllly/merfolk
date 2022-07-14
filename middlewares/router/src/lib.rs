@@ -1,14 +1,12 @@
 use std::marker::PhantomData;
 
+use anyhow::Result;
 use merfolk::{
   interfaces::{Backend, Middleware},
   Call, Reply,
 };
-
-use anyhow::Result;
-use thiserror::Error;
-
 use regex::Regex;
+use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum Error {
   #[error("could not parse regex: {0}")]

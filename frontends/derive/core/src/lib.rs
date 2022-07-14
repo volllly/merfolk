@@ -1,7 +1,6 @@
+pub use merfolk_frontend_derive_macros::frontend;
 #[cfg(feature = "std")]
 use thiserror::Error;
-
-pub use merfolk_frontend_derive_macros::frontend;
 
 pub mod reexports {
   pub use anyhow;

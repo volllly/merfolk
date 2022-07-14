@@ -1,5 +1,5 @@
-use merfolk::*;
 use criterion::{criterion_group, criterion_main, Criterion};
+use merfolk::*;
 
 pub fn backend_in_process(c: &mut Criterion) {
   use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -22,7 +22,11 @@ pub fn backend_in_process(c: &mut Criterion) {
     .build()
     .unwrap();
 
-  c.bench_function("backend_in_process", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.call("bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("backend_in_process", |b| {
+    b.iter(|| {
+      merfolk_caller.frontend::<_, ()>(|f| f.call("bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, backend_in_process);
