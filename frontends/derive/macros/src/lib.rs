@@ -22,7 +22,7 @@ pub fn frontend(args: TokenStream, input: TokenStream) -> TokenStream {
     }
   };
 
-  if args_parsed.definition_only.is_some() {
+  if args_parsed.definition_only.is_present() {
     return input;
   }
 

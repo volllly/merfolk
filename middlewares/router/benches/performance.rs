@@ -33,7 +33,7 @@ pub fn middleware_router(c: &mut Criterion) {
 
   c.bench_function("middleware_router", |b| {
     b.iter(|| {
-      let _: () = merfolk_caller.frontend(|f| f.call("route_bench", &()).unwrap()).unwrap();
+      merfolk_caller.frontend::<_, ()>(|f| f.call("route_bench", &()).unwrap()).unwrap();
     })
   });
 }

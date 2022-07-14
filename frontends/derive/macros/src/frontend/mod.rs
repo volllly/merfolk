@@ -28,7 +28,7 @@ pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, 
           } else {
             return true;
           }) {
-            Ok(a) => a.definition_only.is_none(),
+            Ok(a) => !a.definition_only.is_present(),
             Err(_) => true,
           }
         } else {
@@ -69,7 +69,7 @@ pub fn expand_trait(args: &Args, input: &syn::ItemTrait) -> Result<TokenStream, 
         } else {
           return true;
         }) {
-          Ok(a) => a.definition_only.is_none(),
+          Ok(a) => !a.definition_only.is_present(),
           Err(_) => true,
         }
       } else {

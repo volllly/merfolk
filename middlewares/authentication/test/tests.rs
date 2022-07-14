@@ -94,5 +94,5 @@ fn authentication_register_in_process_failing() {
     .build()
     .unwrap();
 
-  let _: () = merfolk_caller.frontend(|f| f.call("not_allowed", &()).unwrap()).unwrap();
+  merfolk_caller.frontend::<_, ()>(|f| f.call("not_allowed", &()).unwrap()).unwrap();
 }
