@@ -2,7 +2,7 @@
 name = "merfolk_backend_serialport"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "A serial port `Backend` for merfolk."
 repository = "https://github.com/volllly/merfolk"

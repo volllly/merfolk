@@ -1,6 +1,6 @@
-use super::Backend;
-
 use anyhow::Result;
+
+use super::Backend;
 
 /// The [`Frontend`] is responsible for processing incomming RPCs and for passing on outgoing RPCs to the [`Backend`].
 /// The [`Frontend`] provides a way to make calls on the client side and a way to register procedures on the server side.

@@ -1,6 +1,5 @@
-use merfolk::*;
-
 use criterion::{criterion_group, criterion_main, Criterion};
+use merfolk::*;
 
 pub fn middleware_router(c: &mut Criterion) {
   use tokio::sync::{
@@ -25,16 +24,18 @@ pub fn middleware_router(c: &mut Criterion) {
   let _merfolk_receiver = Mer::builder()
     .backend(merfolk_backend_in_process::InProcess::builder().from(from).build().unwrap())
     .frontend(register_receiver)
-    .middlewares(vec![
-      merfolk_middleware_router::Router::builder()
-        .routes(vec![("route_(.*)".to_string(), "$1".to_string())])
-        .build_boxed()
-        .unwrap(),
-    ])
+    .middlewares(vec![merfolk_middleware_router::Router::builder()
+      .routes(vec![("route_(.*)".to_string(), "$1".to_string())])
+      .build_boxed()
+      .unwrap()])
     .build()
     .unwrap();
 
-  c.bench_function("middleware_router", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.call("route_bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("middleware_router", |b| {
+    b.iter(|| {
+      let _: () = merfolk_caller.frontend(|f| f.call("route_bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, middleware_router);

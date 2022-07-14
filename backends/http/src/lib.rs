@@ -1,22 +1,16 @@
-use merfolk::{interfaces::Backend, Call, Reply};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use thiserror::Error;
-
 use hyper::{
   client::{connect::dns::GaiResolver, HttpConnector},
-  Body, Client, Method, Request, StatusCode,
-};
-
-use hyper::{
   http::Uri,
   service::{make_service_fn, service_fn},
-  Response, Server,
+  Body, Client, Method, Request, Response, Server, StatusCode,
 };
-use std::{fmt::Debug, net::SocketAddr, sync::Arc};
-use tokio::{runtime::Runtime, sync};
-
 use log::{debug, info, trace};
+use merfolk::{interfaces::Backend, Call, Reply};
+use thiserror::Error;
+use tokio::{runtime::Runtime, sync};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -256,7 +250,7 @@ impl Backend for Http {
   {
     trace!("deserialize from");
 
-    serde_json::from_str(&from).map_err(|e| Error::Deserialize(e).into())
+    serde_json::from_str(from).map_err(|e| Error::Deserialize(e).into())
   }
 }
 

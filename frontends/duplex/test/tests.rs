@@ -32,7 +32,13 @@ fn duplex_in_process_duplex() {
 
   let merfolk_first = Mer::builder()
     .backend(merfolk_backend_in_process::InProcess::builder().to(to_first).from(from_second).build().unwrap())
-    .frontend(merfolk_frontend_duplex::Duplex::builder().caller(register_first_caller).receiver(register_first_receiver).build().unwrap())
+    .frontend(
+      merfolk_frontend_duplex::Duplex::builder()
+        .caller(register_first_caller)
+        .receiver(register_first_receiver)
+        .build()
+        .unwrap(),
+    )
     .build()
     .unwrap();
 

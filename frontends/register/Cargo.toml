@@ -2,7 +2,7 @@
 name = "merfolk_frontend_register"
 version = "0.1.0"
 authors = ["Paul Volavsek <paul.volavsek@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "A `Frontend` for merfolk allowing for manuel procedure registration."
 repository = "https://github.com/volllly/merfolk"

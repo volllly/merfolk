@@ -1,15 +1,12 @@
 use std::marker::PhantomData;
 
-use serde::{Deserialize, Serialize};
-
+use anyhow::Result;
 use merfolk::{
   interfaces::{Backend, Middleware},
   Call, Reply,
 };
-
-use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
 use wildmatch::WildMatch;
 
 #[derive(Debug, Error)]
@@ -71,7 +68,7 @@ struct Intermediate<B: Backend> {
   payload: B::Intermediate,
 }
 
-impl<'staic, B: Backend + 'static> Middleware for Authentication<'static, B> {
+impl<B: Backend + 'static> Middleware for Authentication<'static, B> {
   type Backend = B;
 
   fn wrap_call(&self, call: Result<crate::Call<<Self::Backend as Backend>::Intermediate>>) -> Result<crate::Call<<Self::Backend as Backend>::Intermediate>> {

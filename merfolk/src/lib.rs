@@ -46,7 +46,10 @@
 //! // build the backend
 //! let backend = Http::builder()
 //!   // configure backend as server
-//!   .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080))
+//!   .listen(SocketAddr::new(
+//!     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+//!     8080,
+//!   ))
 //!   .build()
 //!   .unwrap();
 //!
@@ -55,7 +58,10 @@
 //!   .procedures(
 //!     vec![
 //!       ("add", Register::<Http>::make_procedure(|(a, b)| add(a, b))),
-//!       ("subtract", Register::<Http>::make_procedure(|(a, b)| subtract(a, b))),
+//!       (
+//!         "subtract",
+//!         Register::<Http>::make_procedure(|(a, b)| subtract(a, b)),
+//!       ),
 //!     ]
 //!     .into_iter()
 //!     .collect(),
@@ -65,10 +71,16 @@
 //!
 //! // register the procedures in the frontend
 //! frontend.register("add", |(a, b)| add(a, b)).unwrap();
-//! frontend.register("subtract", |(a, b)| subtract(a, b)).unwrap();
+//! frontend
+//!   .register("subtract", |(a, b)| subtract(a, b))
+//!   .unwrap();
 //!
 //! // build merfolk instance acting as server
-//! let _merfolk = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+//! let _merfolk = Mer::builder()
+//!   .backend(backend)
+//!   .frontend(frontend)
+//!   .build()
+//!   .unwrap();
 //! # }
 //! ```
 //!
@@ -91,7 +103,11 @@
 //! let frontend = Register::builder().build().unwrap();
 //!
 //! // build merfolk instance acting as client
-//! let merfolk = Mer::builder().backend(backend).frontend(frontend).build().unwrap();
+//! let merfolk = Mer::builder()
+//!   .backend(backend)
+//!   .frontend(frontend)
+//!   .build()
+//!   .unwrap();
 //!
 //! // call remote procedures via the frontend
 //! let result_add: Result<i32> = merfolk.frontend(|f| f.call("add", &(1, 2))).unwrap();
@@ -123,7 +139,10 @@
 //!   // configure backend as client
 //!   .speak("http://localhost:8080".parse::<hyper::Uri>().unwrap())
 //!   // configure backend as server
-//!   .listen(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8081))
+//!   .listen(SocketAddr::new(
+//!     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+//!     8081,
+//!   ))
 //!   .build()
 //!   .unwrap();
 //!
@@ -134,16 +153,30 @@
 //! let receiver_frontend = Receiver::builder().build().unwrap();
 //!
 //! // combine the frontends using the [`Duplex`](https://docs.rs/merfolk_frontend_derive) frontend
-//! let frontend = Duplex::builder().caller(caller_frontend).receiver(receiver_frontend).build().unwrap();
+//! let frontend = Duplex::builder()
+//!   .caller(caller_frontend)
+//!   .receiver(receiver_frontend)
+//!   .build()
+//!   .unwrap();
 //!
 //! // build router middleware
-//! let middleware = Router::builder().routes(vec![("prefix_(.*)".to_string(), "$1".to_string())]).build_boxed().unwrap();
+//! let middleware = Router::builder()
+//!   .routes(vec![("prefix_(.*)".to_string(), "$1".to_string())])
+//!   .build_boxed()
+//!   .unwrap();
 //!
 //! // build merfolk instance acting as client and server
-//! let merfolk = Mer::builder().backend(backend).frontend(frontend).middlewares(vec![middleware]).build().unwrap();
+//! let merfolk = Mer::builder()
+//!   .backend(backend)
+//!   .frontend(frontend)
+//!   .middlewares(vec![middleware])
+//!   .build()
+//!   .unwrap();
 //!
 //! // call remote procedures via the caller frontend
-//! let result: String = merfolk.frontend(|f| f.caller.call("some_remote_function", &()).unwrap()).unwrap();
+//! let result: String = merfolk
+//!   .frontend(|f| f.caller.call("some_remote_function", &()).unwrap())
+//!   .unwrap();
 //! # }
 //! ```
 //!
@@ -166,7 +199,6 @@
 //! If communication over a specific channel or a different frontend etc. is needed a module can be created by implementing the [`Backend`](crate::interfaces::backend::Backend), [`Frontend`](crate::interfaces::frontend::Frontend) or [`Middleware`](crate::interfaces::middleware::Middleware) trait.
 //!
 //! For examples please see the [provided modules](#provided-modules)
-//!
 
 extern crate alloc;
 
@@ -177,13 +209,12 @@ pub mod interfaces;
 #[cfg(test)]
 mod test;
 
-use anyhow::Result;
-
-use helpers::smart_lock::SmartLock;
-use log::trace;
-
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, string::String, vec::Vec};
+
+use anyhow::Result;
+use helpers::smart_lock::SmartLock;
+use log::trace;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
@@ -340,7 +371,9 @@ impl<B: interfaces::Backend + 'static, F: interfaces::Frontend<Backend = B>> Mer
   /// #     .frontend(merfolk_frontend_register::Register::builder().build().unwrap())
   /// #     .build()
   /// #     .unwrap();
-  /// let result: i32 = merfolk.frontend(|f| f.call("add", &(1, 2)).unwrap()).unwrap();
+  /// let result: i32 = merfolk
+  ///   .frontend(|f| f.call("add", &(1, 2)).unwrap())
+  ///   .unwrap();
   /// # }
   /// ```
   pub fn frontend<T, R>(&self, access: T) -> Result<R, Error>

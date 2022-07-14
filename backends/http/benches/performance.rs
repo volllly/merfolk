@@ -1,6 +1,7 @@
-use merfolk::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use criterion::{criterion_group, criterion_main, Criterion};
+use merfolk::*;
 
 pub fn backend_http(c: &mut Criterion) {
   let register_caller = merfolk_frontend_register::Register::builder().build().unwrap();
@@ -24,7 +25,11 @@ pub fn backend_http(c: &mut Criterion) {
     .build()
     .unwrap();
 
-  c.bench_function("backend_http", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.call("bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("backend_http", |b| {
+    b.iter(|| {
+      merfolk_caller.frontend::<_, ()>(|f| f.call("bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, backend_http);

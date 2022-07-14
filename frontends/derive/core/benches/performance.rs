@@ -1,14 +1,12 @@
-use merfolk::*;
-
 use criterion::{criterion_group, criterion_main, Criterion};
+use merfolk::*;
 
 pub fn frontend_derive(c: &mut Criterion) {
   #[merfolk_frontend_derive::frontend()]
   struct Data {}
 
   #[merfolk_frontend_derive::frontend(target = "Data")]
-  trait Receiver
-  {
+  trait Receiver {
     fn bench() {}
   }
 
@@ -29,7 +27,11 @@ pub fn frontend_derive(c: &mut Criterion) {
     .build()
     .unwrap();
 
-  c.bench_function("frontend_derive", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.bench().unwrap()).unwrap(); }));
+  c.bench_function("frontend_derive", |b| {
+    b.iter(|| {
+      merfolk_caller.frontend::<_, ()>(|f| f.bench().unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, frontend_derive);

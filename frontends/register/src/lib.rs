@@ -1,17 +1,15 @@
-use merfolk::{
-  interfaces::{Backend, Frontend},
-  Call, Reply,
-};
-
 use std::{
   collections::HashMap,
   sync::{Arc, Mutex},
 };
 
 use anyhow::Result;
-use thiserror::Error;
-
 use log::trace;
+use merfolk::{
+  interfaces::{Backend, Frontend},
+  Call, Reply,
+};
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {

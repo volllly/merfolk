@@ -1,8 +1,7 @@
-use merfolk::*;
-
 use criterion::{criterion_group, criterion_main, Criterion};
-use merfolk_frontend_register::Register;
+use merfolk::*;
 use merfolk_backend_in_process::InProcess;
+use merfolk_frontend_register::Register;
 
 pub fn frontend_register(c: &mut Criterion) {
   use tokio::sync::{
@@ -30,7 +29,11 @@ pub fn frontend_register(c: &mut Criterion) {
     .build()
     .unwrap();
 
-  c.bench_function("frontend_register", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.call("bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("frontend_register", |b| {
+    b.iter(|| {
+      merfolk_caller.frontend::<_, ()>(|f| f.call("bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 criterion_group!(benches, frontend_register);

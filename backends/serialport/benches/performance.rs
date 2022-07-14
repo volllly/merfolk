@@ -1,11 +1,15 @@
-use merfolk::*;
+#[cfg(all(unix, not(target_arch = "armv7")))]
 use criterion::{criterion_group, criterion_main, Criterion};
+#[cfg(all(unix, not(target_arch = "armv7")))]
+use merfolk::*;
 
+#[cfg(all(unix, not(target_arch = "armv7")))]
 struct MockTty {
   pub m: Box<dyn serialport::SerialPort>,
   pub s: Box<dyn serialport::SerialPort>,
 }
 
+#[cfg(all(unix, not(target_arch = "armv7")))]
 impl serialport::SerialPort for MockTty {
   fn name(&self) -> Option<String> {
     Some(format!(
@@ -126,6 +130,7 @@ impl serialport::SerialPort for MockTty {
   }
 }
 
+#[cfg(all(unix, not(target_arch = "armv7")))]
 impl std::io::Write for MockTty {
   fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
     self.m.write(buf)
@@ -136,6 +141,7 @@ impl std::io::Write for MockTty {
   }
 }
 
+#[cfg(all(unix, not(target_arch = "armv7")))]
 impl std::io::Read for MockTty {
   fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
     self.s.read(buf)
@@ -172,11 +178,15 @@ pub fn backend_serialport(c: &mut Criterion) {
     .build()
     .unwrap();
 
-  c.bench_function("backend_serialport", |b| b.iter(|| { let _: () = merfolk_caller.frontend(|f| f.call("bench", &()).unwrap()).unwrap(); }));
+  c.bench_function("backend_serialport", |b| {
+    b.iter(|| {
+      let _: () = merfolk_caller.frontend(|f| f.call("bench", &()).unwrap()).unwrap();
+    })
+  });
 }
 
 #[cfg(all(unix, not(target_arch = "armv7")))]
-criterion_group!{
+criterion_group! {
   name = benches;
   config = Criterion::default().measurement_time(std::time::Duration::from_secs(15));
   targets = backend_serialport
@@ -184,3 +194,6 @@ criterion_group!{
 
 #[cfg(all(unix, not(target_arch = "armv7")))]
 criterion_main!(benches);
+
+#[cfg(not(all(unix, not(target_arch = "armv7"))))]
+fn main() {}
