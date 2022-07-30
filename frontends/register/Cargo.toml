@@ -17,7 +17,7 @@ anyhow = "1.0"
 derive_builder = "0.11.2"
 log = { version = "0.4", default-features = false }
 merfolk = { path = "../../merfolk", features = ["std"], version = "0.1" }
-serde = "1.0.139"
+serde = "1.0.140"
 thiserror = "1.0"
 
 [dev-dependencies]
