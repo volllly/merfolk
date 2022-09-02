@@ -23,7 +23,7 @@ serde = { version = "1.0.144", features = ["derive"] }
 ron = "0.7"
 serialport = "4.2"
 thiserror = "1.0"
-tokio = { version = "1.20", features = ["rt", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.21", features = ["rt", "rt-multi-thread", "sync", "time"] }
 
 [dev-dependencies]
 merfolk_frontend_register = { path = "../../frontends/register" }

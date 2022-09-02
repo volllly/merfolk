@@ -26,7 +26,7 @@ merfolk_backend_http = { path = "../../backends/http" }
 
 hyper = "0.14"
 rand = "0.8"
-tokio = { version = "1.20", features = ["sync"] }
+tokio = { version = "1.21", features = ["sync"] }
 criterion = "0.3"
 
 [[test]]
