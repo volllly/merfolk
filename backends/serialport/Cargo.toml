@@ -29,7 +29,7 @@ tokio = { version = "1.21", features = ["rt", "rt-multi-thread", "sync", "time"]
 merfolk_frontend_register = { path = "../../frontends/register" }
 
 rand = "0.8"
-criterion = "0.3"
+criterion = "0.4"
 
 [[test]]
 name = "test"
