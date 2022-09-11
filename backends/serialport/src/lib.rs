@@ -12,7 +12,7 @@ pub enum Error {
   #[error("serializing failed: {0}")]
   Serialize(#[source] ron::Error),
   #[error("deserializing failed: {0}")]
-  Deserialize(#[source] ron::Error),
+  Deserialize(#[source] ron::de::SpannedError),
   #[error("no receiver was degistered by init()")]
   NoReceiver,
   #[error("could not create runtime: {0}")]
