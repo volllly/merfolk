@@ -27,7 +27,7 @@ merfolk_middleware_authentication = { path = "../../middlewares/authentication" 
 
 rand = "0.8"
 tokio = "1.21"
-criterion = "0.4"
+criterion = "0.5"
 
 [[test]]
 name = "test"
