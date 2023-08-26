@@ -24,7 +24,7 @@ anyhow = "1.0"
 derive_builder = "0.11.2"
 log = { version = "0.4", default-features = false }
 merfolk = { path = "../../merfolk", version = "0.1" }
-serde = "1.0.144"
+serde = "1.0.188"
 
 [dev-dependencies]
 merfolk_backend_in_process = { path = "../../backends/in-process" }
