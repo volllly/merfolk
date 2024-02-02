@@ -24,7 +24,7 @@ wildmatch = "2.1"
 [dev-dependencies]
 merfolk_backend_in_process = { path = "../../backends/in-process" }
 
-tokio = { version = "1.21", features = ["sync"] }
+tokio = { version = "1.36", features = ["sync"] }
 criterion = "0.4"
 
 [[test]]
