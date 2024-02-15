@@ -28,7 +28,7 @@ merfolk_frontend_derive = { path = "../core" }
 
 merfolk = { path = "../../../merfolk" }
 serde = { version = "1.0", default-features = false }
-derive_builder = "0.11.2"
+derive_builder = "0.20.0"
 
 [lib]
 proc-macro = true
