@@ -14,7 +14,7 @@ keywords = ["RPC", "merfolk", "log"]
 
 [dependencies]
 anyhow = "1.0"
-derive_builder = "0.11.2"
+derive_builder = "0.20.0"
 log = { version = "0.4", features = ["std"] }
 merfolk = { path = "../../merfolk", features = ["std"], version = "0.1" }
 serde = "1.0.144"
