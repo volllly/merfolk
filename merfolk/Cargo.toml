@@ -41,4 +41,4 @@ merfolk_frontend_logger = { path = "../frontends/logger" }
 merfolk_middleware_authentication = { path = "../middlewares/authentication" }
 merfolk_middleware_router = { path = "../middlewares/router" }
 
-hyper = { version = "0.14", features = ["client", "server", "tcp"] }
+hyper = { version = "1.2", features = ["client", "server", "tcp"] }
