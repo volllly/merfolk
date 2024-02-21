@@ -24,7 +24,7 @@ thiserror = "1.0"
 merfolk_backend_in_process = { path = "../../backends/in-process" }
 merfolk_backend_http = { path = "../../backends/http" }
 
-hyper = "0.14"
+hyper = "1.2"
 rand = "0.8"
 tokio = { version = "1.21", features = ["sync"] }
 criterion = "0.4"
