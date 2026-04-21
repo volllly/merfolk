@@ -25,7 +25,7 @@ merfolk_backend_in_process = { path = "../../backends/in-process" }
 merfolk_backend_http = { path = "../../backends/http" }
 
 hyper = "0.14"
-rand = "0.8"
+rand = "0.9.3"
 tokio = { version = "1.21", features = ["sync"] }
 criterion = "0.4"
 
